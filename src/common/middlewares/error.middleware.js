@@ -1,4 +1,4 @@
-const { nodeEnv } = require('../config/env');
+const { nodeEnv } = require('../../config/env');
 
 exports.notFound = (req, res) => {
   res.status(404).json({ message: `Route not found: ${req.method} ${req.originalUrl}` });
@@ -13,8 +13,9 @@ exports.errorHandler = (err, req, res, next) => {
   if (err.name === 'CastError') { status = 400; message = `Invalid ${err.path}`; }
   if (err.code === 11000) { status = 409; message = `Duplicate value for ${Object.keys(err.keyValue).join(', ')}`; }
 
+  if (status >= 500) console.error(err);
   res.status(status).json({
     message,
-    ...(nodeEnv === 'development' && { stack: err.stack }),
+    ...(nodeEnv === 'development' && status >= 500 && { stack: err.stack }),
   });
 };
