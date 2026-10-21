@@ -1,21 +1,33 @@
-import { nodeEnv } from '../../config/env.js';
+import { isProd } from '../../config/env.js';
+import ApiError from '../utils/ApiError.js';
 
 export const notFound = (req, res) => {
   res.status(404).json({ message: `Route not found: ${req.method} ${req.originalUrl}` });
 };
 
-// eslint-disable-next-line no-unused-vars
-export const errorHandler = (err, req, res, next) => {
-  let status = err.statusCode || 500;
-  let message = err.message || 'Internal Server Error';
+/** Turns known error types into an HTTP status + message. */
+const toHttpError = (error) => {
+  if (error instanceof ApiError) return { status: error.statusCode, message: error.message };
 
-  if (err.name === 'ValidationError') status = 400;
-  if (err.name === 'CastError') { status = 400; message = `Invalid ${err.path}`; }
-  if (err.code === 11000) { status = 409; message = `Duplicate value for ${Object.keys(err.keyValue).join(', ')}`; }
+  if (error.name === 'ValidationError') return { status: 400, message: error.message };
 
-  if (status >= 500) console.error(err);
-  res.status(status).json({
-    message,
-    ...(nodeEnv === 'development' && status >= 500 && { stack: err.stack }),
-  });
+  if (error.name === 'CastError') return { status: 400, message: `Invalid ${error.path}` };
+
+  if (error.code === 11000) {
+    const fields = Object.keys(error.keyValue).join(', ');
+
+    return { status: 409, message: `Duplicate value for ${fields}` };
+  }
+
+  // Unexpected errors: don't leak internal details in production
+  return { status: 500, message: isProd ? 'Internal Server Error' : error.message };
+};
+
+// Express recognises an error handler by its 4 arguments, so `_next` must stay.
+export const errorHandler = (error, _req, res, _next) => {
+  const { status, message } = toHttpError(error);
+
+  if (status >= 500) console.error(error);
+
+  res.status(status).json({ message });
 };

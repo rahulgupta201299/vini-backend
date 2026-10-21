@@ -1,51 +1,71 @@
-import asyncHandler from '../../common/utils/asyncHandler.js';
 import ApiError from '../../common/utils/ApiError.js';
-import * as auth from './login.service.js';
-import { SESSION_COOKIE } from './login.middleware.js';
+import { isEmail, isFilledPassword } from '../../common/utils/validators.js';
 import { isProd } from '../../config/env.js';
 
-const TRUST_COOKIE = 'vini_admin_trusted';
-const cookieOpts = (expires) => ({ httpOnly: true, secure: isProd, sameSite: 'strict', path: '/', expires });
+import { SESSION_COOKIE, TRUSTED_DEVICE_COOKIE } from './login.constants.js';
+import * as loginService from './login.service.js';
 
-const isEmail = (v) => typeof v === 'string' && v.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim());
+const cookieOptions = (expires) => ({
+  httpOnly: true,
+  secure: isProd,
+  sameSite: 'strict',
+  path: '/',
+  expires,
+});
 
-/** POST /admin/auth/login { email, password, trustToken? } */
-export const login = asyncHandler(async (req, res) => {
-  const { email, password } = req.body || {};
-  if (!isEmail(email) || typeof password !== 'string' || !password || password.length > 200) {
+const requireChallengeId = (challengeId) => {
+  if (typeof challengeId !== 'string' || !challengeId) {
+    throw new ApiError(400, 'challengeId is required.');
+  }
+};
+
+/** POST /api/admin/auth/login { email, password, trustToken? } */
+export const login = async (req, res) => {
+  const { email, password, trustToken = req.cookies?.[TRUSTED_DEVICE_COOKIE] } = req.body ?? {};
+
+  if (!isEmail(email) || !isFilledPassword(password)) {
     throw new ApiError(400, 'Enter a valid email and password.');
   }
-  const trustToken = req.body.trustToken || req.cookies?.[TRUST_COOKIE];
-  const result = await auth.login({ email, password, trustToken });
-  if (!result.otpRequired) res.cookie(SESSION_COOKIE, result.token, cookieOpts(result.expiresAt));
+
+  const result = await loginService.login({ email, password, trustToken });
+
+  if (!result.otpRequired) {
+    res.cookie(SESSION_COOKIE, result.token, cookieOptions(result.expiresAt));
+  }
+
   res.json(result);
-});
+};
 
-/** POST /admin/auth/send-otp { challengeId } — sends a new code for the same login attempt. */
-export const sendOtp = asyncHandler(async (req, res) => {
-  const { challengeId } = req.body || {};
-  if (!challengeId) throw new ApiError(400, 'challengeId is required.');
-  res.json(await auth.sendOtp({ challengeId }));
-});
+/** POST /api/admin/auth/send-otp { challengeId } — a new code for the same login attempt. */
+export const sendOtp = async (req, res) => {
+  const { challengeId } = req.body ?? {};
 
-/** POST /admin/auth/verify-otp { challengeId, code } — on success the device skips 2FA for 48h. */
-export const verifyOtp = asyncHandler(async (req, res) => {
-  const { challengeId, code } = req.body || {};
-  if (!challengeId) throw new ApiError(400, 'challengeId is required.');
-  const result = await auth.verifyOtp({ challengeId, code });
-  res.cookie(SESSION_COOKIE, result.token, cookieOpts(result.expiresAt));
-  res.cookie(TRUST_COOKIE, result.trustToken, cookieOpts(result.trustExpiresAt));
+  requireChallengeId(challengeId);
+
+  res.json(await loginService.sendOtp({ challengeId }));
+};
+
+/** POST /api/admin/auth/verify-otp { challengeId, code } — on success this device skips 2FA for 48h. */
+export const verifyOtp = async (req, res) => {
+  const { challengeId, code = '' } = req.body ?? {};
+
+  requireChallengeId(challengeId);
+
+  const result = await loginService.verifyOtp({ challengeId, code: String(code) });
+
+  res.cookie(SESSION_COOKIE, result.token, cookieOptions(result.expiresAt));
+  res.cookie(TRUSTED_DEVICE_COOKIE, result.trustToken, cookieOptions(result.trustExpiresAt));
   res.json(result);
-});
+};
 
-/** GET /admin/auth/me */
+/** GET /api/admin/auth/me */
 export const me = (req, res) => res.json(req.admin.toPublic());
 
 /**
- * POST /admin/auth/logout — sessions are stateless, so signing out means the client drops its session token/cookie.
- * The trusted-device cookie is kept so 2FA stays skipped for its 48h.
+ * POST /api/admin/auth/logout — sessions are stateless, so signing out just drops the session cookie.
+ * The trusted-device cookie stays, so 2FA remains skipped for its 48h.
  */
-export const logout = (req, res) => {
+export const logout = (_req, res) => {
   res.clearCookie(SESSION_COOKIE, { path: '/' });
   res.json({ ok: true });
 };

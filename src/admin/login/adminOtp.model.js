@@ -1,9 +1,9 @@
 import mongoose from 'mongoose';
 
 /**
- * Pending email OTP — at most ONE document per admin (unique `admin`): a new login overwrites it with a new code.
- * MongoDB deletes each document automatically once `expiresAt` passes (TTL index, checked about every 60s),
- * and the service deletes it immediately after a successful verify or too many wrong attempts.
+ * Pending email OTP — at most ONE per admin: a new login overwrites it with a new code.
+ * MongoDB deletes it automatically after `expiresAt` (TTL index, checked about every minute);
+ * the service also deletes it right after a successful verify or too many wrong attempts.
  */
 const adminOtpSchema = new mongoose.Schema(
   {
@@ -15,7 +15,7 @@ const adminOtpSchema = new mongoose.Schema(
     lastSentAt: { type: Date, default: Date.now },
     expiresAt: { type: Date, required: true },
   },
-  { timestamps: true, collection: 'admin_otps' }
+  { timestamps: true, collection: 'admin_otps' },
 );
 
 adminOtpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });

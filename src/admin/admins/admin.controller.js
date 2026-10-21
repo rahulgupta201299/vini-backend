@@ -1,26 +1,37 @@
-import asyncHandler from '../../common/utils/asyncHandler.js';
-import * as service from './admin.service.js';
+import * as adminService from './admin.service.js';
 
 /** GET /api/admin/admins */
-export const list = asyncHandler(async (req, res) => res.json(await service.list()));
+export const list = async (_req, res) => {
+  res.json(await adminService.list());
+};
 
 /** GET /api/admin/admins/:id */
-export const get = asyncHandler(async (req, res) => res.json(await service.get(req.params.id)));
+export const get = async (req, res) => {
+  res.json(await adminService.get(req.params.id));
+};
 
 /** POST /api/admin/admins { name, email, password, role? } */
-export const create = asyncHandler(async (req, res) => res.status(201).json(await service.create(req.body || {})));
+export const create = async (req, res) => {
+  res.status(201).json(await adminService.create(req.body ?? {}));
+};
 
 /** POST /api/admin/admins/setup { name, email, password } — only while no admin exists yet */
-export const setup = asyncHandler(async (req, res) => res.status(201).json(await service.setup(req.body || {})));
+export const setup = async (req, res) => {
+  res.status(201).json(await adminService.setup(req.body ?? {}));
+};
 
 /** PATCH /api/admin/admins/:id { name?, email?, password?, role?, isActive? } */
-export const update = asyncHandler(async (req, res) => res.json(await service.update(req.params.id, req.body, req.admin)));
+export const update = async (req, res) => {
+  res.json(await adminService.update(req.params.id, req.body ?? {}, req.admin));
+};
 
 /** PATCH /api/admin/admins/me/password { currentPassword, newPassword } */
-export const changeOwnPassword = asyncHandler(async (req, res) => res.json(await service.changeOwnPassword(req.admin, req.body || {})));
+export const changeOwnPassword = async (req, res) => {
+  res.json(await adminService.changeOwnPassword(req.admin, req.body ?? {}));
+};
 
 /** DELETE /api/admin/admins/:id */
-export const remove = asyncHandler(async (req, res) => {
-  await service.remove(req.params.id, req.admin);
+export const remove = async (req, res) => {
+  await adminService.remove(req.params.id, req.admin);
   res.status(204).send();
-});
+};

@@ -1,42 +1,52 @@
 import mongoose from 'mongoose';
-import { mongoUri, dbName, missingEnv } from './env.js';
+
+import { dbName, missingEnv, mongoUri } from './env.js';
+
+const CONNECTED = 1;
+
+let connectionPromise = null;
+let lastError = null;
+
+const hideConnectionString = (message) =>
+  message.replace(/mongodb(\+srv)?:\/\/\S+/g, 'mongodb://***');
 
 /**
  * Connects to MongoDB once and reuses the connection.
- * - Local (`npm run dev`): called by server.js at startup.
- * - Vercel (serverless): Vercel loads src/app.js directly, so app.js also calls this per request;
- *   the cached promise means only the first request in a function instance actually connects.
+ * Locally server.js calls it at startup. On Vercel (which loads app.js directly) app.js calls it
+ * before each API request — only the first call actually connects.
  */
-let connecting = null;
-let lastError = null;
-
 const connectDB = async () => {
-  if (missingEnv.length) throw new Error(`Missing environment variable(s): ${missingEnv.join(', ')}`);
-  if (mongoose.connection.readyState === 1) return mongoose.connection;
-  if (!connecting) {
-    connecting = mongoose
-      .connect(mongoUri, { dbName, serverSelectionTimeoutMS: 10000 })
-      .then((conn) => {
-        lastError = null;
-        console.log(`MongoDB connected: ${conn.connection.host}/${conn.connection.name}`);
-        return conn.connection;
-      })
-      .catch((err) => {
-        connecting = null; // allow a retry on the next request
-        lastError = String(err.message || err).replace(/mongodb(\+srv)?:\/\/[^\s]+/g, 'mongodb://***');
-        console.error(`MongoDB connection error: ${err.message}`);
-        throw err;
-      });
+  if (missingEnv.length) {
+    throw new Error(`Missing environment variable(s): ${missingEnv.join(', ')}`);
   }
-  return connecting;
+
+  if (mongoose.connection.readyState === CONNECTED) return mongoose.connection;
+
+  connectionPromise ??= mongoose
+    .connect(mongoUri, { dbName, serverSelectionTimeoutMS: 10_000 })
+    .then(({ connection }) => {
+      lastError = null;
+      console.log(`MongoDB connected: ${connection.host}/${connection.name}`);
+
+      return connection;
+    })
+    .catch((error) => {
+      connectionPromise = null; // let the next request try again
+      lastError = hideConnectionString(error.message);
+      console.error(`MongoDB connection error: ${lastError}`);
+
+      throw error;
+    });
+
+  return connectionPromise;
 };
 
 mongoose.connection.on('disconnected', () => {
-  connecting = null;
+  connectionPromise = null;
   console.warn('MongoDB disconnected');
 });
 
-/** Last connection error (for GET /api/health); the connection string is masked. */
+/** Last connection error, for GET /api/health (the connection string is hidden). */
 export const getLastError = () => lastError;
 
 export default connectDB;

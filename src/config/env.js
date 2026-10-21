@@ -1,64 +1,78 @@
-// Loads .env into process.env. Every module that reads config imports this file, and ESM runs it
-// before the importing module's own code — so .env is always loaded before it is used.
-import dotenv from 'dotenv';
+/**
+ * App configuration, read once from environment variables (.env locally, Vercel settings in production).
+ * Every module that needs config imports from here, so .env is always loaded first.
+ */
 import crypto from 'node:crypto';
+import dotenv from 'dotenv';
 
 dotenv.config({ quiet: true });
 
-// JWT_SECRET is temporarily optional (commented out below). Restore it once JWT_SECRET is set on Vercel.
-// const required = ['MONGO_URI', 'JWT_SECRET'];
-const required = ['MONGO_URI'];
-// Don't crash on import (on Vercel that turns every request into FUNCTION_INVOCATION_FAILED with no clue why).
-// Missing variables are logged here and reported by GET /api/health; API calls answer 503 until they are set.
-export const missingEnv = required.filter((key) => !process.env[key] || !String(process.env[key]).trim());
-if (missingEnv.length) console.error(`[config] Missing required environment variable(s): ${missingEnv.join(', ')}`);
+const MINUTE = 60 * 1000;
+const HOUR = 60 * MINUTE;
 
-export const nodeEnv = process.env.NODE_ENV || 'development';
+const {
+  NODE_ENV = 'development',
+  PORT = '8000',
+  MONGO_URI = '',
+  DB_NAME = 'vini',
+  CLIENT_URLS = 'http://localhost:3000,http://localhost:5173',
+  JWT_SECRET,
+  ADMIN_2FA_ENABLED = 'true',
+  SMTP_HOST = '',
+  SMTP_PORT = '465',
+  SMTP_SECURE = 'true',
+  SMTP_USER = '',
+  SMTP_PASS = '',
+  MAIL_FROM = SMTP_USER,
+} = process.env;
 
-const config = {
-  missingEnv,
-  nodeEnv,
-  isProd: nodeEnv === 'production',
-  port: parseInt(process.env.PORT, 10) || 8000,
-  mongoUri: process.env.MONGO_URI,
-  dbName: process.env.DB_NAME || 'vini',
-  // Comma-separated list of frontend origins allowed to call the API
-  clientUrls: (process.env.CLIENT_URLS || 'http://localhost:3000,http://localhost:5173')
-    .split(',')
-    .map((u) => u.trim())
-    .filter(Boolean),
+// JWT_SECRET is temporarily optional — add it back to this list once it is set on Vercel.
+const REQUIRED_VARS = ['MONGO_URI'];
 
-  // TEMPORARY fallback while JWT_SECRET is not set: a secret derived from MONGO_URI (private, already configured).
-  // Never a hard-coded value — that would let anyone who reads the code forge admin logins.
-  // Restore to `jwtSecret: process.env.JWT_SECRET,` when JWT_SECRET is added.
-  jwtSecret:
-    process.env.JWT_SECRET ||
-    crypto.createHash('sha256').update(`vini-jwt-fallback:${process.env.MONGO_URI || ''}`).digest('hex'),
+/** Required variables that are not set. The app still starts; GET /api/health reports them. */
+export const missingEnv = REQUIRED_VARS.filter((key) => !process.env[key]?.trim());
 
-  // Admin auth
-  admin: {
-    // Email OTP after the password. ADMIN_2FA_ENABLED=false → email + password only (temporary, until SMTP is set up)
-    twoFactorEnabled: (process.env.ADMIN_2FA_ENABLED || 'true') !== 'false',
-    sessionTtlMs: 48 * 60 * 60 * 1000, // signed-in session: 48 hours
-    trustTtlMs: 48 * 60 * 60 * 1000, // 2FA skipped on this device for 48 hours after a verified OTP
-    otpTtlMs: 10 * 60 * 1000, // OTP valid for 10 minutes
-    otpMaxAttempts: 5,
-    otpResendCooldownMs: 30 * 1000,
-    otpMaxSends: 5,
-    maxFailedLogins: 5,
-    lockMs: 15 * 60 * 1000,
-  },
+if (missingEnv.length) {
+  console.error(`[config] Missing required environment variable(s): ${missingEnv.join(', ')}`);
+}
 
-  // SMTP for OTP emails. If SMTP_HOST is empty in development, the OTP is printed to the console instead.
-  smtp: {
-    host: process.env.SMTP_HOST || '',
-    port: parseInt(process.env.SMTP_PORT, 10) || 465,
-    secure: (process.env.SMTP_SECURE || 'true') === 'true',
-    user: process.env.SMTP_USER || '',
-    pass: process.env.SMTP_PASS || '',
-    from: process.env.MAIL_FROM || process.env.SMTP_USER || '',
-  },
+export const nodeEnv = NODE_ENV;
+export const isProd = NODE_ENV === 'production';
+export const port = Number(PORT);
+export const mongoUri = MONGO_URI;
+export const dbName = DB_NAME;
+
+/** Frontend origins allowed by CORS in production (development also allows any localhost). */
+export const clientUrls = CLIENT_URLS.split(',')
+  .map((url) => url.trim())
+  .filter(Boolean);
+
+/**
+ * Signs admin tokens and OTP hashes. TEMPORARY fallback while JWT_SECRET is not set: a secret derived
+ * from MONGO_URI (private and already configured) — never a hard-coded value anyone could read.
+ */
+export const jwtSecret =
+  JWT_SECRET || crypto.createHash('sha256').update(`vini-jwt-fallback:${MONGO_URI}`).digest('hex');
+
+export const adminAuth = {
+  // Email OTP after the password. ADMIN_2FA_ENABLED=false → email + password only.
+  twoFactorEnabled: ADMIN_2FA_ENABLED !== 'false',
+  sessionTtlMs: 48 * HOUR,
+  trustedDeviceTtlMs: 48 * HOUR, // no OTP on this device for 48h after a verified code
+  otpTtlMs: 10 * MINUTE,
+  otpMaxAttempts: 5,
+  otpMaxSends: 5,
+  otpResendCooldownMs: 30 * 1000,
+  maxFailedLogins: 5,
+  lockDurationMs: 15 * MINUTE,
 };
 
-export default config;
-export const { isProd, port, mongoUri, dbName, clientUrls, jwtSecret, admin, smtp } = config;
+/** SMTP for OTP emails. With no SMTP_HOST in development, the OTP is printed to the console. */
+export const smtp = {
+  host: SMTP_HOST,
+  port: Number(SMTP_PORT),
+  secure: SMTP_SECURE === 'true',
+  user: SMTP_USER,
+  pass: SMTP_PASS,
+  from: MAIL_FROM,
+};

@@ -1,83 +1,154 @@
-import Admin from './admin.model.js';
 import ApiError from '../../common/utils/ApiError.js';
+import { MIN_PASSWORD_LENGTH, isEmail, isPassword } from '../../common/utils/validators.js';
 
-const MIN_PASSWORD = 8;
-const isEmail = (v) => typeof v === 'string' && v.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim());
+import Admin, { ROLES } from './admin.model.js';
 
-function validate({ email, password, name, role }, { partial = false } = {}) {
-  if ((!partial || email !== undefined) && !isEmail(email)) throw new ApiError(400, 'Enter a valid email address.');
-  if ((!partial || password !== undefined) && (typeof password !== 'string' || password.length < MIN_PASSWORD || password.length > 200)) {
-    throw new ApiError(400, `Password must be at least ${MIN_PASSWORD} characters.`);
+/* ---------- validation ---------- */
+
+const assertEmail = (email) => {
+  if (!isEmail(email)) throw new ApiError(400, 'Enter a valid email address.');
+};
+
+const assertPassword = (password) => {
+  if (!isPassword(password)) {
+    throw new ApiError(400, `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
   }
-  if (name !== undefined && (typeof name !== 'string' || !name.trim() || name.length > 100)) throw new ApiError(400, 'Enter a valid name.');
-  if (role !== undefined && !Admin.ROLES.includes(role)) throw new ApiError(400, `Role must be one of: ${Admin.ROLES.join(', ')}.`);
-}
+};
 
-async function findOr404(id) {
+const assertName = (name) => {
+  if (typeof name !== 'string' || !name.trim() || name.length > 100) {
+    throw new ApiError(400, 'Enter a valid name.');
+  }
+};
+
+const assertRole = (role) => {
+  if (!ROLES.includes(role)) throw new ApiError(400, `Role must be one of: ${ROLES.join(', ')}.`);
+};
+
+/* ---------- helpers ---------- */
+
+const findAdminOrThrow = async (id) => {
   const admin = await Admin.findById(id).catch(() => null);
+
   if (!admin) throw new ApiError(404, 'Admin not found.');
+
   return admin;
-}
+};
 
-/** Superadmins that are still active, excluding `exceptId` — used to never lock everyone out. */
-const otherActiveSuperadmins = (exceptId) => Admin.countDocuments({ _id: { $ne: exceptId }, role: 'superadmin', isActive: true });
+/** Makes sure removing this superadmin still leaves another active one. */
+const assertAnotherActiveSuperadmin = async (adminId) => {
+  const others = await Admin.countDocuments({
+    _id: { $ne: adminId },
+    role: 'superadmin',
+    isActive: true,
+  });
 
-export const list = async () => (await Admin.find().sort({ createdAt: 1 })).map((a) => a.toPublic());
+  if (!others) throw new ApiError(400, 'At least one active superadmin is required.');
+};
 
-export const get = async (id) => (await findOr404(id)).toPublic();
+const isActiveSuperadmin = ({ role, isActive }) => role === 'superadmin' && isActive;
 
-export const create = async ({ email, password, name, role = 'admin' }) => {
-  validate({ email, password, name, role });
-  const admin = new Admin({ email, name: name?.trim() || 'Admin', role });
-  await admin.setPassword(password);
-  await admin.save(); // duplicate email → 409 from the error handler
+/* ---------- actions ---------- */
+
+export const list = async () => {
+  const admins = await Admin.find().sort({ createdAt: 1 });
+
+  return admins.map((admin) => admin.toPublic());
+};
+
+export const get = async (id) => {
+  const admin = await findAdminOrThrow(id);
+
   return admin.toPublic();
 };
 
-/** First-run only: creates the first superadmin while the admins collection is empty. */
+export const create = async ({ email, password, name = 'Admin', role = 'admin' }) => {
+  assertEmail(email);
+  assertPassword(password);
+  assertName(name);
+  assertRole(role);
+
+  const admin = new Admin({ email, name: name.trim(), role });
+
+  await admin.setPassword(password);
+  await admin.save(); // a duplicate email becomes a 409 in the error middleware
+
+  return admin.toPublic();
+};
+
+/** First run only: creates the first superadmin while there are no admins yet. */
 export const setup = async ({ email, password, name }) => {
-  if (await Admin.exists({})) throw new ApiError(403, 'Setup is already done. Ask a superadmin to add you.');
+  const hasAdmins = await Admin.exists({});
+
+  if (hasAdmins) throw new ApiError(403, 'Setup is already done. Ask a superadmin to add you.');
+
   return create({ email, password, name, role: 'superadmin' });
 };
 
-export const update = async (id, body, actor) => {
-  const { email, name, role, isActive, password } = body || {};
-  validate({ email, name, role, password }, { partial: true });
-  if (isActive !== undefined && typeof isActive !== 'boolean') throw new ApiError(400, 'isActive must be true or false.');
+/** Updates only the fields that were sent. */
+export const update = async (id, changes, actor) => {
+  const { email, name, role, password, isActive } = changes;
 
-  const admin = await findOr404(id);
-  const isSelf = admin._id.equals(actor._id);
-  const losingSuperadmin = admin.role === 'superadmin' && admin.isActive && ((role && role !== 'superadmin') || isActive === false);
-  if (losingSuperadmin && !(await otherActiveSuperadmins(admin._id))) throw new ApiError(400, 'At least one active superadmin is required.');
-  if (isSelf && isActive === false) throw new ApiError(400, "You can't deactivate your own account.");
+  if (email) assertEmail(email);
+  if (name) assertName(name);
+  if (role) assertRole(role);
+  if (password) assertPassword(password);
 
-  if (email !== undefined) admin.email = email;
-  if (name !== undefined) admin.name = name.trim();
-  if (role !== undefined) admin.role = role;
-  if (isActive !== undefined) admin.isActive = isActive;
-  if (password !== undefined) await admin.setPassword(password);
-  // password change, deactivation or role change → sign the admin out everywhere
-  if (password !== undefined || isActive === false || role !== undefined) admin.tokenVersion += 1;
+  // isActive is a boolean, so `false` is a real value here — check its type instead of truthiness
+  const hasIsActive = typeof isActive === 'boolean';
+
+  if ('isActive' in changes && !hasIsActive) {
+    throw new ApiError(400, 'isActive must be true or false.');
+  }
+
+  const admin = await findAdminOrThrow(id);
+  const isDeactivating = isActive === false;
+  const isDemoting = role && role !== 'superadmin';
+
+  if (isDeactivating && admin._id.equals(actor._id)) {
+    throw new ApiError(400, "You can't deactivate your own account.");
+  }
+
+  if (isActiveSuperadmin(admin) && (isDemoting || isDeactivating)) {
+    await assertAnotherActiveSuperadmin(admin._id);
+  }
+
+  if (email) admin.email = email;
+  if (name) admin.name = name.trim();
+  if (role) admin.role = role;
+  if (hasIsActive) admin.isActive = isActive;
+  if (password) await admin.setPassword(password);
+
+  // A new password, a role change or deactivation signs the admin out everywhere
+  if (password || role || isDeactivating) admin.tokenVersion += 1;
+
   await admin.save();
+
   return admin.toPublic();
 };
 
-/** Signed-in admin changes their own password (needs the current one). */
-export const changeOwnPassword = async (actor, { currentPassword, newPassword }) => {
+/** The signed-in admin changes their own password (the current one is required). */
+export const changeOwnPassword = async (actor, { currentPassword = '', newPassword }) => {
   const admin = await Admin.findById(actor._id).select('+passwordHash');
-  if (!admin || !(await admin.checkPassword(String(currentPassword || '')))) throw new ApiError(400, 'Current password is incorrect.');
-  validate({ password: newPassword }, { partial: true });
+  const isCurrentCorrect = admin && (await admin.checkPassword(String(currentPassword)));
+
+  if (!isCurrentCorrect) throw new ApiError(400, 'Current password is incorrect.');
+
+  assertPassword(newPassword);
+
   await admin.setPassword(newPassword);
   admin.tokenVersion += 1;
   await admin.save();
+
   return { ok: true };
 };
 
 export const remove = async (id, actor) => {
-  const admin = await findOr404(id);
+  const admin = await findAdminOrThrow(id);
+
   if (admin._id.equals(actor._id)) throw new ApiError(400, "You can't delete your own account.");
-  if (admin.role === 'superadmin' && admin.isActive && !(await otherActiveSuperadmins(admin._id))) {
-    throw new ApiError(400, 'At least one active superadmin is required.');
-  }
+
+  if (isActiveSuperadmin(admin)) await assertAnotherActiveSuperadmin(admin._id);
+
   await admin.deleteOne();
 };

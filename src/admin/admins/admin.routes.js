@@ -1,21 +1,32 @@
 import { Router } from 'express';
-
-const router = Router();
 import rateLimit from 'express-rate-limit';
-import * as ctrl from './admin.controller.js';
+
 import { requireAdmin, requireRole } from '../login/login.middleware.js';
 
-const setupLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: 'draft-8', legacyHeaders: false });
+import * as adminController from './admin.controller.js';
 
-// First-run bootstrap (no auth): works only while the admins collection is empty.
-router.post('/setup', setupLimiter, ctrl.setup);
+const setupLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+});
+
+const router = Router();
+
+// First-run bootstrap (no sign-in needed): only works while there are no admins
+router.post('/setup', setupLimiter, adminController.setup);
 
 // Any signed-in admin
-router.patch('/me/password', requireAdmin, ctrl.changeOwnPassword);
+router.patch('/me/password', requireAdmin, adminController.changeOwnPassword);
 
 // Superadmin only
 router.use(requireAdmin, requireRole('superadmin'));
-router.route('/').get(ctrl.list).post(ctrl.create);
-router.route('/:id').get(ctrl.get).patch(ctrl.update).delete(ctrl.remove);
+router.route('/').get(adminController.list).post(adminController.create);
+router
+  .route('/:id')
+  .get(adminController.get)
+  .patch(adminController.update)
+  .delete(adminController.remove);
 
 export default router;

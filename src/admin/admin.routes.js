@@ -1,24 +1,23 @@
 import { Router } from 'express';
-import loginRoutes from './login/login.routes.js';
-import adminsRoutes from './admins/admin.routes.js';
 
-const router = Router();
+import adminsRoutes from './admins/admin.routes.js';
+import loginRoutes from './login/login.routes.js';
 
 /**
- * Admin API — /api/admin/*. One folder per admin section (MVC):
+ * Admin API, mounted at /api/admin. One folder per admin section (MVC):
  *
  *   src/admin/<section>/
- *     <name>.model.js        Mongoose schema(s)          — M
- *     <name>.service.js      business logic / DB access
- *     <name>.controller.js   request → service → JSON    — C
- *     <name>.routes.js       URLs, rate limits, auth     — routing
- *     <name>.middleware.js   (optional) section-specific middleware
+ *     <name>.model.js        Mongoose schema            (Model)
+ *     <name>.service.js      business logic, DB access
+ *     <name>.controller.js   request → service → JSON   (Controller)
+ *     <name>.routes.js       URLs, rate limits, auth
  *
- * Views are the Next.js admin pages in the Frontend (V).
- * Protect a section's routes with `requireAdmin` (and `requireRole(...)`) from ./login/login.middleware.
+ * The views are the Next.js admin pages in the Frontend.
+ * Protect routes with `requireAdmin` / `requireRole(...)` from ./login/login.middleware.js.
  */
+const router = Router();
+
 router.use('/auth', loginRoutes);
 router.use('/admins', adminsRoutes);
-// router.use('/homepage', homepageRoutes);  (import homepageRoutes from './homepage/homepage.routes.js')
 
 export default router;

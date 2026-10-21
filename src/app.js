@@ -1,53 +1,58 @@
 import './config/env.js'; // first: loads .env before any other module runs
-import express from 'express';
+
+import cookieParser from 'cookie-parser';
 import cors from 'cors';
+import express from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import cookieParser from 'cookie-parser';
-import routes from './routes.js';
-import ApiError from './common/utils/ApiError.js';
+
 import { notFound, errorHandler } from './common/middlewares/error.middleware.js';
+import ApiError from './common/utils/ApiError.js';
 import connectDB from './config/db.js';
-import { nodeEnv, isProd, clientUrls } from './config/env.js';
+import { clientUrls, isProd } from './config/env.js';
 import healthRoutes from './health/health.routes.js';
+import routes from './routes.js';
 
-// Development: any http://localhost:<port> / 127.0.0.1 frontend is allowed. Production: only CLIENT_URLS.
 const LOCALHOST = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
-const isAllowedOrigin = (origin) => clientUrls.includes(origin) || (!isProd && LOCALHOST.test(origin));
 
-const app = express();
+/** Production allows only CLIENT_URLS; development also allows any localhost port. */
+const isAllowedOrigin = (origin) =>
+  clientUrls.includes(origin) || (!isProd && LOCALHOST.test(origin));
 
-app.use(helmet());
-app.use(
-  cors({
-    origin: (origin, cb) => {
-      // Allow non-browser tools (Postman, curl) that send no Origin header
-      if (!origin || isAllowedOrigin(origin)) return cb(null, true);
-      return cb(new ApiError(403, `CORS blocked for origin: ${origin}`));
-    },
-    credentials: true,
-  })
-);
-app.use(express.json({ limit: '1mb' }));
-app.use(cookieParser());
-app.use(express.urlencoded({ extended: true }));
-if (nodeEnv === 'development') app.use(morgan('dev'));
+const corsOptions = {
+  credentials: true,
+  origin: (origin, callback) => {
+    // Requests without an Origin header (curl, Postman, server-to-server) are allowed
+    if (!origin || isAllowedOrigin(origin)) return callback(null, true);
 
-// Health check reports DB/config problems itself (mounted before the DB guard below)
-app.use('/api/health', healthRoutes);
+    return callback(new ApiError(403, `CORS blocked for origin: ${origin}`));
+  },
+};
 
-// Make sure MongoDB is connected before any API route runs (needed on Vercel, where server.js is not used)
-app.use('/api', async (req, res, next) => {
+/** Makes sure MongoDB is connected before any API route runs (needed on Vercel). */
+const requireDatabase = async (_req, _res, next) => {
   try {
     await connectDB();
     next();
   } catch {
     next(new ApiError(503, 'Database unavailable. Please try again.'));
   }
-});
+};
 
-app.get('/', (req, res) => res.json({ message: 'VINI API is running' }));
-app.use('/api', routes);
+const app = express();
+
+app.use(helmet());
+app.use(cors(corsOptions));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+if (!isProd) app.use(morgan('dev'));
+
+app.get('/', (_req, res) => res.json({ message: 'VINI API is running' }));
+
+// Health reports database problems itself, so it is mounted before the database guard
+app.use('/api/health', healthRoutes);
+app.use('/api', requireDatabase, routes);
 
 app.use(notFound);
 app.use(errorHandler);

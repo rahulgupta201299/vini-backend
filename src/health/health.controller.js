@@ -1,23 +1,27 @@
 import mongoose from 'mongoose';
+
 import connectDB, { getLastError } from '../config/db.js';
 import { missingEnv, nodeEnv } from '../config/env.js';
 
-const states = ['disconnected', 'connected', 'connecting', 'disconnecting'];
+const DB_STATES = ['disconnected', 'connected', 'connecting', 'disconnecting'];
 
-/** GET /api/health — server + database status, with the reason when the database can't be reached. */
-export const getHealth = async (req, res) => {
+/** GET /api/health — server and database status, with the reason when something is wrong. */
+export const getHealth = async (_req, res) => {
   let dbError = null;
+
   try {
     await connectDB();
   } catch {
-    dbError = getLastError() || 'Could not connect';
+    dbError = getLastError() ?? 'Could not connect';
   }
-  const ok = !dbError && !missingEnv.length;
-  res.status(ok ? 200 : 503).json({
-    status: ok ? 'ok' : 'error',
+
+  const isHealthy = !dbError && !missingEnv.length;
+
+  res.status(isHealthy ? 200 : 503).json({
+    status: isHealthy ? 'ok' : 'error',
     env: nodeEnv,
     uptime: process.uptime(),
-    db: states[mongoose.connection.readyState] || 'unknown',
+    db: DB_STATES[mongoose.connection.readyState] ?? 'unknown',
     ...(missingEnv.length && { missingEnv }),
     ...(dbError && { dbError }),
   });

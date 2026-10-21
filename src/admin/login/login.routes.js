@@ -1,11 +1,10 @@
 import { Router } from 'express';
-
-const router = Router();
 import rateLimit from 'express-rate-limit';
-import * as ctrl from './login.controller.js';
+
+import * as loginController from './login.controller.js';
 import { requireAdmin } from './login.middleware.js';
 
-const limiter = rateLimit({
+const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 30,
   standardHeaders: 'draft-8',
@@ -13,10 +12,12 @@ const limiter = rateLimit({
   message: { message: 'Too many attempts. Please wait and try again.' },
 });
 
-router.post('/login', limiter, ctrl.login);
-router.post('/send-otp', limiter, ctrl.sendOtp);
-router.post('/verify-otp', limiter, ctrl.verifyOtp);
-router.get('/me', requireAdmin, ctrl.me);
-router.post('/logout', ctrl.logout);
+const router = Router();
+
+router.post('/login', loginLimiter, loginController.login);
+router.post('/send-otp', loginLimiter, loginController.sendOtp);
+router.post('/verify-otp', loginLimiter, loginController.verifyOtp);
+router.get('/me', requireAdmin, loginController.me);
+router.post('/logout', loginController.logout);
 
 export default router;

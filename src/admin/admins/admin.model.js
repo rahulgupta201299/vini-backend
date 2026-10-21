@@ -1,44 +1,40 @@
-import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import mongoose from 'mongoose';
 
-/** Admin accounts (admins collection). Created and managed through /api/admin/admins — never from env variables. */
+export const ROLES = ['superadmin', 'admin', 'editor'];
+
+const PASSWORD_HASH_ROUNDS = 12;
+
+/** Admin accounts (admins collection). Managed through /api/admin/admins — never through env variables. */
 const adminSchema = new mongoose.Schema(
   {
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     name: { type: String, trim: true, default: 'Admin' },
     passwordHash: { type: String, required: true, select: false },
-    role: { type: String, enum: ['superadmin', 'admin', 'editor'], default: 'admin' },
+    role: { type: String, enum: ROLES, default: 'admin' },
     isActive: { type: Boolean, default: true },
-    // Bumping this invalidates every session and trusted device for the admin (e.g. after a password change)
+    // Bumping this signs the admin out everywhere (all sessions and trusted devices)
     tokenVersion: { type: Number, default: 0 },
     failedLoginCount: { type: Number, default: 0, select: false },
     lockUntil: { type: Date, select: false },
     lastLoginAt: Date,
   },
-  { timestamps: true, collection: 'admins' }
+  { timestamps: true, collection: 'admins' },
 );
 
 adminSchema.methods.setPassword = async function setPassword(password) {
-  this.passwordHash = await bcrypt.hash(password, 12);
+  this.passwordHash = await bcrypt.hash(password, PASSWORD_HASH_ROUNDS);
 };
 
 adminSchema.methods.checkPassword = function checkPassword(password) {
   return bcrypt.compare(password, this.passwordHash);
 };
 
+/** Safe to send to the client (no password hash or security counters). */
 adminSchema.methods.toPublic = function toPublic() {
-  return {
-    id: this._id.toString(),
-    email: this.email,
-    name: this.name,
-    role: this.role,
-    isActive: this.isActive,
-    lastLoginAt: this.lastLoginAt,
-    createdAt: this.createdAt,
-    updatedAt: this.updatedAt,
-  };
-};
+  const { id, email, name, role, isActive, lastLoginAt, createdAt, updatedAt } = this;
 
-adminSchema.statics.ROLES = ['superadmin', 'admin', 'editor'];
+  return { id, email, name, role, isActive, lastLoginAt, createdAt, updatedAt };
+};
 
 export default mongoose.model('Admin', adminSchema);
