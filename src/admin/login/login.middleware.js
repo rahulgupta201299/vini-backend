@@ -1,6 +1,6 @@
-const ApiError = require('../../common/utils/ApiError');
-const asyncHandler = require('../../common/utils/asyncHandler');
-const { getAdminFromSession } = require('./login.service');
+import ApiError from '../../common/utils/ApiError.js';
+import asyncHandler from '../../common/utils/asyncHandler.js';
+import { getAdminFromSession } from './login.service.js';
 
 const SESSION_COOKIE = 'vini_admin_session';
 
@@ -25,4 +25,4 @@ const requireRole = (...roles) => (req, res, next) => {
   next();
 };
 
-module.exports = { requireAdmin, requireRole, getSessionToken, SESSION_COOKIE };
+export { requireAdmin, requireRole, getSessionToken, SESSION_COOKIE };

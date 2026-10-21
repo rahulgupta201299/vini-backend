@@ -1,5 +1,5 @@
-const nodemailer = require('nodemailer');
-const { smtp, isProd } = require('../../config/env');
+import nodemailer from 'nodemailer';
+import { smtp, isProd } from '../../config/env.js';
 
 let transporter;
 const getTransporter = () => {
@@ -24,7 +24,7 @@ const otpEmailHtml = (code, name) => `
 </div>`;
 
 /** Checks the SMTP login once at startup and logs the result (does not stop the server). */
-exports.verifySmtp = async () => {
+export const verifySmtp = async () => {
   if (!smtp.host) {
     console.warn('[mail] SMTP not configured (SMTP_HOST empty) — admin OTPs will be printed to this console.');
     return false;
@@ -40,7 +40,7 @@ exports.verifySmtp = async () => {
 };
 
 /** Emails the 6-digit admin OTP. Without SMTP settings in development, the code is printed to the console. */
-exports.sendOtpEmail = async ({ to, code, name }) => {
+export const sendOtpEmail = async ({ to, code, name }) => {
   if (!smtp.host) {
     if (isProd) throw new Error('SMTP is not configured');
     console.log(`\n[mail] SMTP not configured — admin OTP for ${to}: ${code}\n`);

@@ -1,7 +1,9 @@
-const router = require('express').Router();
-const rateLimit = require('express-rate-limit');
-const ctrl = require('./login.controller');
-const { requireAdmin } = require('./login.middleware');
+import { Router } from 'express';
+
+const router = Router();
+import rateLimit from 'express-rate-limit';
+import * as ctrl from './login.controller.js';
+import { requireAdmin } from './login.middleware.js';
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -17,4 +19,4 @@ router.post('/verify-otp', limiter, ctrl.verifyOtp);
 router.get('/me', requireAdmin, ctrl.me);
 router.post('/logout', ctrl.logout);
 
-module.exports = router;
+export default router;

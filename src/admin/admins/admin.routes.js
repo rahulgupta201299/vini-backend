@@ -1,7 +1,9 @@
-const router = require('express').Router();
-const rateLimit = require('express-rate-limit');
-const ctrl = require('./admin.controller');
-const { requireAdmin, requireRole } = require('../login/login.middleware');
+import { Router } from 'express';
+
+const router = Router();
+import rateLimit from 'express-rate-limit';
+import * as ctrl from './admin.controller.js';
+import { requireAdmin, requireRole } from '../login/login.middleware.js';
 
 const setupLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: 'draft-8', legacyHeaders: false });
 
@@ -16,4 +18,4 @@ router.use(requireAdmin, requireRole('superadmin'));
 router.route('/').get(ctrl.list).post(ctrl.create);
 router.route('/:id').get(ctrl.get).patch(ctrl.update).delete(ctrl.remove);
 
-module.exports = router;
+export default router;

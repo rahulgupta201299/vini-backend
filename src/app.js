@@ -1,13 +1,15 @@
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const morgan = require('morgan');
-const cookieParser = require('cookie-parser');
-const routes = require('./routes');
-const ApiError = require('./common/utils/ApiError');
-const { notFound, errorHandler } = require('./common/middlewares/error.middleware');
-const connectDB = require('./config/db');
-const { nodeEnv, isProd, clientUrls } = require('./config/env');
+import './config/env.js'; // first: loads .env before any other module runs
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import morgan from 'morgan';
+import cookieParser from 'cookie-parser';
+import routes from './routes.js';
+import ApiError from './common/utils/ApiError.js';
+import { notFound, errorHandler } from './common/middlewares/error.middleware.js';
+import connectDB from './config/db.js';
+import { nodeEnv, isProd, clientUrls } from './config/env.js';
+import healthRoutes from './health/health.routes.js';
 
 // Development: any http://localhost:<port> / 127.0.0.1 frontend is allowed. Production: only CLIENT_URLS.
 const LOCALHOST = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
@@ -32,7 +34,7 @@ app.use(express.urlencoded({ extended: true }));
 if (nodeEnv === 'development') app.use(morgan('dev'));
 
 // Health check reports DB/config problems itself (mounted before the DB guard below)
-app.use('/api/health', require('./health/health.routes'));
+app.use('/api/health', healthRoutes);
 
 // Make sure MongoDB is connected before any API route runs (needed on Vercel, where server.js is not used)
 app.use('/api', async (req, res, next) => {
@@ -50,4 +52,4 @@ app.use('/api', routes);
 app.use(notFound);
 app.use(errorHandler);
 
-module.exports = app;
+export default app;

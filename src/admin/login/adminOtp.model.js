@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 /**
  * Pending email OTP — at most ONE document per admin (unique `admin`): a new login overwrites it with a new code.
@@ -20,4 +20,4 @@ const adminOtpSchema = new mongoose.Schema(
 
 adminOtpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
-module.exports = mongoose.model('AdminOtp', adminOtpSchema);
+export default mongoose.model('AdminOtp', adminOtpSchema);

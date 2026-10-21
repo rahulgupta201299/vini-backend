@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const { mongoUri, dbName, missingEnv } = require('./env');
+import mongoose from 'mongoose';
+import { mongoUri, dbName, missingEnv } from './env.js';
 
 /**
  * Connects to MongoDB once and reuses the connection.
@@ -36,6 +36,7 @@ mongoose.connection.on('disconnected', () => {
   console.warn('MongoDB disconnected');
 });
 
-module.exports = connectDB;
 /** Last connection error (for GET /api/health); the connection string is masked. */
-module.exports.getLastError = () => lastError;
+export const getLastError = () => lastError;
+
+export default connectDB;

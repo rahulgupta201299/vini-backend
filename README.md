@@ -1,6 +1,7 @@
 # vini-backend
 
-Node.js + Express + MongoDB (Mongoose) API for VINI, organised **feature-wise MVC**.
+Node.js + Express + MongoDB (Mongoose) API for VINI, organised **feature-wise MVC**, written as **ES modules**
+(`"type": "module"` — use `import`/`export`, and include `.js` in relative imports, e.g. `import x from './x.js'`).
 
 ## Run
 

@@ -1,16 +1,16 @@
-const mongoose = require('mongoose');
-const connectDB = require('../config/db');
-const { missingEnv, nodeEnv } = require('../config/env');
+import mongoose from 'mongoose';
+import connectDB, { getLastError } from '../config/db.js';
+import { missingEnv, nodeEnv } from '../config/env.js';
 
 const states = ['disconnected', 'connected', 'connecting', 'disconnecting'];
 
 /** GET /api/health — server + database status, with the reason when the database can't be reached. */
-exports.getHealth = async (req, res) => {
+export const getHealth = async (req, res) => {
   let dbError = null;
   try {
     await connectDB();
   } catch {
-    dbError = connectDB.getLastError() || 'Could not connect';
+    dbError = getLastError() || 'Could not connect';
   }
   const ok = !dbError && !missingEnv.length;
   res.status(ok ? 200 : 503).json({

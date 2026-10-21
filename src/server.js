@@ -1,7 +1,8 @@
-const app = require('./app');
-const connectDB = require('./config/db');
-const { port } = require('./config/env');
-const { verifySmtp } = require('./common/services/mail.service');
+import './config/env.js'; // first: loads .env before any other module runs
+import app from './app.js';
+import connectDB from './config/db.js';
+import { port } from './config/env.js';
+import { verifySmtp } from './common/services/mail.service.js';
 
 const start = async () => {
   // Don't exit if the DB is unreachable: the server still starts, GET /api/health shows why,

@@ -1,4 +1,8 @@
-const router = require('express').Router();
+import { Router } from 'express';
+import loginRoutes from './login/login.routes.js';
+import adminsRoutes from './admins/admin.routes.js';
+
+const router = Router();
 
 /**
  * Admin API — /api/admin/*. One folder per admin section (MVC):
@@ -13,8 +17,8 @@ const router = require('express').Router();
  * Views are the Next.js admin pages in the Frontend (V).
  * Protect a section's routes with `requireAdmin` (and `requireRole(...)`) from ./login/login.middleware.
  */
-router.use('/auth', require('./login/login.routes'));
-router.use('/admins', require('./admins/admin.routes'));
-// router.use('/homepage', require('./homepage/homepage.routes'));
+router.use('/auth', loginRoutes);
+router.use('/admins', adminsRoutes);
+// router.use('/homepage', homepageRoutes);  (import homepageRoutes from './homepage/homepage.routes.js')
 
-module.exports = router;
+export default router;

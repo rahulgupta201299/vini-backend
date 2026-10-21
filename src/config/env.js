@@ -1,17 +1,21 @@
-require('dotenv').config({ quiet: true });
-const crypto = require('crypto');
+// Loads .env into process.env. Every module that reads config imports this file, and ESM runs it
+// before the importing module's own code — so .env is always loaded before it is used.
+import dotenv from 'dotenv';
+import crypto from 'node:crypto';
+
+dotenv.config({ quiet: true });
 
 // JWT_SECRET is temporarily optional (commented out below). Restore it once JWT_SECRET is set on Vercel.
 // const required = ['MONGO_URI', 'JWT_SECRET'];
 const required = ['MONGO_URI'];
 // Don't crash on import (on Vercel that turns every request into FUNCTION_INVOCATION_FAILED with no clue why).
 // Missing variables are logged here and reported by GET /api/health; API calls answer 503 until they are set.
-const missingEnv = required.filter((key) => !process.env[key] || !String(process.env[key]).trim());
+export const missingEnv = required.filter((key) => !process.env[key] || !String(process.env[key]).trim());
 if (missingEnv.length) console.error(`[config] Missing required environment variable(s): ${missingEnv.join(', ')}`);
 
-const nodeEnv = process.env.NODE_ENV || 'development';
+export const nodeEnv = process.env.NODE_ENV || 'development';
 
-module.exports = {
+const config = {
   missingEnv,
   nodeEnv,
   isProd: nodeEnv === 'production',
@@ -55,3 +59,6 @@ module.exports = {
     from: process.env.MAIL_FROM || process.env.SMTP_USER || '',
   },
 };
+
+export default config;
+export const { isProd, port, mongoUri, dbName, clientUrls, jwtSecret, admin, smtp } = config;

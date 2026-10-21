@@ -1,9 +1,12 @@
-const router = require('express').Router();
+import { Router } from 'express';
+import adminRoutes from './admin/admin.routes.js';
+
+const router = Router();
 
 /**
  * Root API router — everything is served under /api (see app.js).
  * Each feature lives in its own folder with its model(s), service, controller and routes.
  */
-router.use('/admin', require('./admin/admin.routes'));
+router.use('/admin', adminRoutes);
 
-module.exports = router;
+export default router;

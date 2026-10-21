@@ -1,10 +1,10 @@
-const crypto = require('crypto');
-const jwt = require('jsonwebtoken');
-const Admin = require('../admins/admin.model');
-const AdminOtp = require('./adminOtp.model');
-const ApiError = require('../../common/utils/ApiError');
-const { sendOtpEmail } = require('../../common/services/mail.service');
-const { jwtSecret, admin: cfg } = require('../../config/env');
+import crypto from 'node:crypto';
+import jwt from 'jsonwebtoken';
+import Admin from '../admins/admin.model.js';
+import AdminOtp from './adminOtp.model.js';
+import ApiError from '../../common/utils/ApiError.js';
+import { sendOtpEmail } from '../../common/services/mail.service.js';
+import { jwtSecret, admin as cfg } from '../../config/env.js';
 
 const GENERIC_LOGIN_ERROR = 'Incorrect email or password.';
 
@@ -82,7 +82,7 @@ async function issueOtp(admin) {
  * - Valid trusted-device token for this admin → signed in straight away (no OTP).
  * - Otherwise → emails a 6-digit OTP and returns a challengeId for step 2.
  */
-exports.login = async ({ email, password, trustToken }) => {
+export const login = async ({ email, password, trustToken }) => {
   const admin = await Admin.findOne({ email: String(email).toLowerCase().trim() }).select('+passwordHash +failedLoginCount +lockUntil');
   if (!admin || !admin.isActive) throw new ApiError(401, GENERIC_LOGIN_ERROR);
   if (admin.lockUntil && admin.lockUntil > new Date()) throw new ApiError(429, 'Too many failed attempts. Try again in a few minutes.');
@@ -116,7 +116,7 @@ exports.login = async ({ email, password, trustToken }) => {
 };
 
 /** Re-sends a fresh OTP for an existing challenge (30s cooldown, max 5 sends). */
-exports.sendOtp = async ({ challengeId }) => {
+export const sendOtp = async ({ challengeId }) => {
   const otp = await AdminOtp.findOne({ challengeId: String(challengeId) }).populate('admin');
   if (!otp || otp.expiresAt < new Date() || !otp.admin?.isActive) throw new ApiError(401, 'Code expired. Please sign in again.');
   if (otp.sendCount >= cfg.otpMaxSends) throw new ApiError(429, 'Too many codes requested. Please sign in again.');
@@ -135,7 +135,7 @@ exports.sendOtp = async ({ challengeId }) => {
 };
 
 /** Step 2: validate the OTP → 48h session + 48h trusted-device token. */
-exports.verifyOtp = async ({ challengeId, code }) => {
+export const verifyOtp = async ({ challengeId, code }) => {
   if (!/^\d{6}$/.test(String(code))) throw new ApiError(400, 'Enter the 6-digit code.');
   const otp = await AdminOtp.findOne({ challengeId: String(challengeId) });
   if (!otp || otp.expiresAt < new Date()) throw new ApiError(401, 'Code expired. Please sign in again.');
@@ -161,7 +161,7 @@ exports.verifyOtp = async ({ challengeId, code }) => {
 };
 
 /** Resolves a session token to the admin, or null. */
-exports.getAdminFromSession = async (token) => {
+export const getAdminFromSession = async (token) => {
   const p = readToken(token, 'admin-session');
   if (!p) return null;
   const admin = await Admin.findById(p.sub);

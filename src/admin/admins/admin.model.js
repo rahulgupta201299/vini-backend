@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
 
 /** Admin accounts (admins collection). Created and managed through /api/admin/admins — never from env variables. */
 const adminSchema = new mongoose.Schema(
@@ -41,4 +41,4 @@ adminSchema.methods.toPublic = function toPublic() {
 
 adminSchema.statics.ROLES = ['superadmin', 'admin', 'editor'];
 
-module.exports = mongoose.model('Admin', adminSchema);
+export default mongoose.model('Admin', adminSchema);

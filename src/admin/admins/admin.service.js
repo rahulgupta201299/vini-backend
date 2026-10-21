@@ -1,5 +1,5 @@
-const Admin = require('./admin.model');
-const ApiError = require('../../common/utils/ApiError');
+import Admin from './admin.model.js';
+import ApiError from '../../common/utils/ApiError.js';
 
 const MIN_PASSWORD = 8;
 const isEmail = (v) => typeof v === 'string' && v.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim());
@@ -22,11 +22,11 @@ async function findOr404(id) {
 /** Superadmins that are still active, excluding `exceptId` — used to never lock everyone out. */
 const otherActiveSuperadmins = (exceptId) => Admin.countDocuments({ _id: { $ne: exceptId }, role: 'superadmin', isActive: true });
 
-exports.list = async () => (await Admin.find().sort({ createdAt: 1 })).map((a) => a.toPublic());
+export const list = async () => (await Admin.find().sort({ createdAt: 1 })).map((a) => a.toPublic());
 
-exports.get = async (id) => (await findOr404(id)).toPublic();
+export const get = async (id) => (await findOr404(id)).toPublic();
 
-exports.create = async ({ email, password, name, role = 'admin' }) => {
+export const create = async ({ email, password, name, role = 'admin' }) => {
   validate({ email, password, name, role });
   const admin = new Admin({ email, name: name?.trim() || 'Admin', role });
   await admin.setPassword(password);
@@ -35,12 +35,12 @@ exports.create = async ({ email, password, name, role = 'admin' }) => {
 };
 
 /** First-run only: creates the first superadmin while the admins collection is empty. */
-exports.setup = async ({ email, password, name }) => {
+export const setup = async ({ email, password, name }) => {
   if (await Admin.exists({})) throw new ApiError(403, 'Setup is already done. Ask a superadmin to add you.');
-  return exports.create({ email, password, name, role: 'superadmin' });
+  return create({ email, password, name, role: 'superadmin' });
 };
 
-exports.update = async (id, body, actor) => {
+export const update = async (id, body, actor) => {
   const { email, name, role, isActive, password } = body || {};
   validate({ email, name, role, password }, { partial: true });
   if (isActive !== undefined && typeof isActive !== 'boolean') throw new ApiError(400, 'isActive must be true or false.');
@@ -63,7 +63,7 @@ exports.update = async (id, body, actor) => {
 };
 
 /** Signed-in admin changes their own password (needs the current one). */
-exports.changeOwnPassword = async (actor, { currentPassword, newPassword }) => {
+export const changeOwnPassword = async (actor, { currentPassword, newPassword }) => {
   const admin = await Admin.findById(actor._id).select('+passwordHash');
   if (!admin || !(await admin.checkPassword(String(currentPassword || '')))) throw new ApiError(400, 'Current password is incorrect.');
   validate({ password: newPassword }, { partial: true });
@@ -73,7 +73,7 @@ exports.changeOwnPassword = async (actor, { currentPassword, newPassword }) => {
   return { ok: true };
 };
 
-exports.remove = async (id, actor) => {
+export const remove = async (id, actor) => {
   const admin = await findOr404(id);
   if (admin._id.equals(actor._id)) throw new ApiError(400, "You can't delete your own account.");
   if (admin.role === 'superadmin' && admin.isActive && !(await otherActiveSuperadmins(admin._id))) {

@@ -1,11 +1,11 @@
-const { nodeEnv } = require('../../config/env');
+import { nodeEnv } from '../../config/env.js';
 
-exports.notFound = (req, res) => {
+export const notFound = (req, res) => {
   res.status(404).json({ message: `Route not found: ${req.method} ${req.originalUrl}` });
 };
 
 // eslint-disable-next-line no-unused-vars
-exports.errorHandler = (err, req, res, next) => {
+export const errorHandler = (err, req, res, next) => {
   let status = err.statusCode || 500;
   let message = err.message || 'Internal Server Error';
 
