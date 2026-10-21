@@ -136,6 +136,13 @@ export const updateCategory = async (id, changes) => {
 
 /* ---------- admin: sub categories ---------- */
 
+/** Alt text for every banner, written from its title and the exam name (admins don't type it). */
+const withAltText = ({ banners = [], examName, kind }) =>
+  banners.map((banner, index) => ({
+    ...banner,
+    alt: banner.title ? `${banner.title} — ${examName}` : `${examName} ${kind} ${index + 1}`,
+  }));
+
 /** Fields an admin may set on a sub category. Anything else in the body is ignored. */
 const pickSubCategoryFields = ({
   category,
@@ -143,13 +150,21 @@ const pickSubCategoryFields = ({
   isActive = true,
   menuIcon = {},
   details = {},
-}) => ({
-  category,
-  name: name?.trim(),
-  isActive,
-  menuIcon,
-  details,
-});
+}) => {
+  const examName = name?.trim();
+
+  return {
+    category,
+    name: examName,
+    isActive,
+    menuIcon,
+    details: {
+      ...details,
+      banners: withAltText({ banners: details.banners, examName, kind: 'banner' }),
+      topRankers: withAltText({ banners: details.topRankers, examName, kind: 'top rankers' }),
+    },
+  };
+};
 
 const assertSlugIsFree = async (slug, exceptId) => {
   const taken = await AllExamsSubCategory.exists({ slug, _id: { $ne: exceptId } });
