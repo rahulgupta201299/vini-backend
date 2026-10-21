@@ -25,7 +25,7 @@ src/
 ├── server.js                 connect DB → start server
 ├── app.js                    express app: security, CORS, parsers, /api, errors
 ├── routes.js                 root router (/api)
-├── config/                   env.js, db.js
+├── config/                   env.js, db.js, collections.js (all collection names)
 ├── common/                   shared by every feature
 │   ├── middlewares/          error.middleware.js (404 + error handler)
 │   ├── services/             mail.service.js (SMTP)
@@ -36,14 +36,23 @@ src/
 └── admin/                    /api/admin/*
     ├── admin.routes.js       mounts every admin section
     ├── login/                /api/admin/auth/*  — login + email OTP 2FA
-    │   ├── adminOtp.model.js     admin_otps collection (1 per admin, TTL)
+    │   ├── adminOtp.model.js     collection `admin.otps` (1 per admin, TTL)
     │   ├── login.constants.js    cookie names, token types
     │   ├── login.service.js
     │   ├── login.controller.js
     │   ├── login.middleware.js   requireAdmin, requireRole
     │   └── login.routes.js
+    ├── homepage/             /api/admin/homepage/*  — homepage sections
+    │   ├── homepage.routes.js    mounts each section (signed-in admins only)
+    │   └── allExams/             All Exams — categories joined to sub categories
+    │       ├── allExamsCategory.model.js      collection `admin.homepage.allExams.categories`
+    │       ├── allExamsSubCategory.model.js   collection `admin.homepage.allExams.subCategories`
+    │       ├── allExams.service.js
+    │       ├── allExams.controller.js
+    │       ├── allExams.routes.js             admin: /api/admin/homepage/all-exams
+    │       └── allExams.public.routes.js      website: /api/exams
     └── admins/               /api/admin/admins/*  — admin accounts
-        ├── admin.model.js        admins collection
+        ├── admin.model.js        collection `admin.login` (admin accounts)
         ├── admin.service.js
         ├── admin.controller.js
         └── admin.routes.js
@@ -81,4 +90,43 @@ Send `Authorization: Bearer <token>` from `/api/admin/auth/login`. Roles: `super
 | PATCH  | `/me/password` | any admin                              | `{ currentPassword, newPassword }`               |
 
 Rules: passwords are at least 8 characters; you can't delete or deactivate yourself; there is always at least one active superadmin;
-changing a password, role or deactivating signs that admin out everywhere.
+a new password signs that admin out everywhere; role and active-status changes apply on their next request.
+
+## All Exams (Homepage → All Exams)
+
+Two collections, joined by the category id (MongoDB `$lookup` / `populate`):
+
+- `admin.homepage.allExams.categories` — `{ name, isActive, order }`
+- `admin.homepage.allExams.subCategories` — `{ category: <category id>, name, slug, isActive, order, menuIcon: { name, color, background }, details }`
+  where `details` is `{ subTitle, banners[], freeClasses[], batches[], topRankers[], aboutExam: { title, highlights[], paragraphs[] }, faqs[] }`.
+  Banners and top rankers have separate `webImageUrl` / `mobileImageUrl`. `slug` is made from the name (page `/goal/<slug>`).
+
+Nothing is deleted: categories and sub categories are switched **active / inactive**. The website only shows active sub
+categories inside active categories; an inactive one's page returns 404 and it leaves the header menu.
+
+| Method | Path                                               | Who     | What                                                                      |
+| ------ | -------------------------------------------------- | ------- | ------------------------------------------------------------------------- |
+| GET    | `/api/exams`                                       | website | active categories with their active sub categories (header menu)          |
+| GET    | `/api/exams/:slug`                                 | website | one active exam page `{ category, subCategory, slug, menuIcon, details }` |
+| GET    | `/api/admin/homepage/all-exams`                    | admin   | every category with its sub categories (active and inactive, no details)  |
+| POST   | `/api/admin/homepage/all-exams/categories`         | admin   | create `{ name }`                                                         |
+| PATCH  | `/api/admin/homepage/all-exams/categories/:id`     | admin   | rename / activate / deactivate `{ name?, isActive? }`                     |
+| GET    | `/api/admin/homepage/all-exams/sub-categories/:id` | admin   | one sub category with details (category joined in)                        |
+| POST   | `/api/admin/homepage/all-exams/sub-categories`     | admin   | create `{ category, name, isActive, menuIcon, details }`                  |
+| PUT    | `/api/admin/homepage/all-exams/sub-categories/:id` | admin   | save the whole sub category                                               |
+| PATCH  | `/api/admin/homepage/all-exams/sub-categories/:id` | admin   | activate / deactivate `{ isActive }`                                      |
+
+Uploaded images are stored inline (data URLs) until S3 is connected — `/api/admin/homepage` accepts bodies up to 15 MB.
+
+## Database collections
+
+MongoDB has no nested collections, so the structure is written into the names with dots
+(all names live in `src/config/collections.js`):
+
+```
+vini (database)
+├── admin.login                             admin accounts
+├── admin.otps                              pending email codes (deleted automatically when expired)
+├── admin.homepage.allExams.categories      All Exams categories
+└── admin.homepage.allExams.subCategories   All Exams sub categories (joined to categories by id)
+```

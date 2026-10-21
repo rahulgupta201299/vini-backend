@@ -1,6 +1,7 @@
 import { Router } from 'express';
 
 import adminsRoutes from './admins/admin.routes.js';
+import homepageRoutes from './homepage/homepage.routes.js';
 import loginRoutes from './login/login.routes.js';
 
 /**
@@ -19,5 +20,6 @@ const router = Router();
 
 router.use('/auth', loginRoutes);
 router.use('/admins', adminsRoutes);
+router.use('/homepage', homepageRoutes);
 
 export default router;

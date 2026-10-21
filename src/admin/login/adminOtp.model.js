@@ -1,5 +1,7 @@
 import mongoose from 'mongoose';
 
+import { COLLECTIONS } from '../../config/collections.js';
+
 /**
  * Pending email OTP — at most ONE per admin: a new login overwrites it with a new code.
  * MongoDB deletes it automatically after `expiresAt` (TTL index, checked about every minute);
@@ -15,7 +17,7 @@ const adminOtpSchema = new mongoose.Schema(
     lastSentAt: { type: Date, default: Date.now },
     expiresAt: { type: Date, required: true },
   },
-  { timestamps: true, collection: 'admin_otps' },
+  { timestamps: true, collection: COLLECTIONS.adminOtps },
 );
 
 adminOtpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });

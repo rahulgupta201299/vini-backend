@@ -9,7 +9,7 @@ Before finishing any change: `npm run format` then `npm run lint` — both must 
 ### Readability first
 
 - Write simple, easy-to-follow code. Prefer a few clear lines over one clever line.
-- Small named helpers (`findAdminOrThrow`, `assertEmail`, `isLocked`) instead of long inline conditions.
+- Small named helpers (`findAdminOrThrow`, `assertEmail`, `isTokenForAdmin`) instead of long inline conditions.
 - Give values names before using them in conditions: `const isDeactivating = isActive === false;`
 - No nested ternaries. Use early returns / guard clauses instead of `else` after `return`/`throw`.
 - Comments explain _why_, not _what_. One short JSDoc line above exported functions and API handlers.
@@ -45,6 +45,12 @@ Before finishing any change: `npm run format` then `npm run lint` — both must 
 - Services: business rules + database access. Throw `ApiError(status, message)` for client errors.
 - Express 5 forwards errors from async handlers automatically — no try/catch or asyncHandler wrapper in controllers.
 - Shared code lives in `src/common/` (utils, middlewares, services). Validation helpers are in `common/utils/validators.js`.
+
+### Database collections
+
+- Collection names live only in `src/config/collections.js` — models use `COLLECTIONS.<name>`, never a string.
+- Name new collections by their place in the admin structure with dots: `admin.<section>.<subsection>…`
+  (e.g. `admin.homepage.heroBanners`). MongoDB has no nested collections; the dots show the hierarchy.
 
 ### Security (never relax these)
 

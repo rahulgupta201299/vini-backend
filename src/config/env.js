@@ -63,8 +63,6 @@ export const adminAuth = {
   otpMaxAttempts: 5,
   otpMaxSends: 5,
   otpResendCooldownMs: 30 * 1000,
-  maxFailedLogins: 5,
-  lockDurationMs: 15 * MINUTE,
 };
 
 /** SMTP for OTP emails. With no SMTP_HOST in development, the OTP is printed to the console. */

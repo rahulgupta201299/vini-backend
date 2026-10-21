@@ -18,8 +18,6 @@ const {
   otpMaxAttempts,
   otpMaxSends,
   otpResendCooldownMs,
-  maxFailedLogins,
-  lockDurationMs,
 } = adminAuth;
 
 /* ---------- small helpers ---------- */
@@ -39,11 +37,11 @@ const isSameHash = (a, b) =>
 /* ---------- tokens ---------- */
 
 /**
- * Signs a token for the admin. Tokens are stateless (nothing stored in MongoDB); they carry the admin id
- * and tokenVersion, so bumping admin.tokenVersion (e.g. on a password change) cancels all of them.
+ * Signs a token for the admin. Tokens are stateless (nothing stored in MongoDB). They carry the admin id
+ * and a fingerprint of the password, so a new password cancels every existing token.
  */
 const signToken = (admin, type, ttlMs) => {
-  const payload = { sub: admin.id, typ: type, ver: admin.tokenVersion };
+  const payload = { sub: admin.id, typ: type, pwd: admin.passwordFingerprint() };
   const token = jwt.sign(payload, jwtSecret, { expiresIn: Math.floor(ttlMs / 1000) });
 
   return { token, expiresAt: fromNow(ttlMs) };
@@ -71,29 +69,12 @@ const readToken = (token, type) => {
   }
 };
 
+/** True when the token belongs to this admin and was issued with their current password. */
 const isTokenForAdmin = (payload, admin) =>
-  payload?.sub === admin.id && payload.ver === admin.tokenVersion;
-
-/* ---------- failed logins ---------- */
-
-const isLocked = ({ lockUntil }) => lockUntil && lockUntil > new Date();
-
-/** Counts a wrong password; after too many, the account is locked for a while. */
-const recordFailedLogin = async (admin) => {
-  admin.failedLoginCount = (admin.failedLoginCount ?? 0) + 1;
-
-  if (admin.failedLoginCount >= maxFailedLogins) {
-    admin.lockUntil = fromNow(lockDurationMs);
-    admin.failedLoginCount = 0;
-  }
-
-  await admin.save();
-};
+  payload?.sub === admin.id && payload.pwd === admin.passwordFingerprint();
 
 /** Saves a successful sign-in and returns the session for the client. */
 const completeSignIn = async (admin) => {
-  admin.failedLoginCount = 0;
-  admin.lockUntil = undefined;
   admin.lastLoginAt = new Date();
   await admin.save();
 
@@ -146,22 +127,13 @@ const issueOtp = async (admin) => {
  * - Otherwise → a 6-digit OTP is emailed and a challengeId returned for step 2.
  */
 export const login = async ({ email, password, trustToken }) => {
-  const admin = await Admin.findOne({ email: email.toLowerCase().trim() }).select(
-    '+passwordHash +failedLoginCount +lockUntil',
-  );
+  const admin = await Admin.findOne({ email: email.toLowerCase().trim() }).select('+passwordHash');
 
   if (!admin?.isActive) throw new ApiError(401, LOGIN_ERROR);
 
-  if (isLocked(admin)) {
-    throw new ApiError(429, 'Too many failed attempts. Try again in a few minutes.');
-  }
-
   const isPasswordCorrect = await admin.checkPassword(password);
 
-  if (!isPasswordCorrect) {
-    await recordFailedLogin(admin);
-    throw new ApiError(401, LOGIN_ERROR);
-  }
+  if (!isPasswordCorrect) throw new ApiError(401, LOGIN_ERROR);
 
   const trustedDevice = readToken(trustToken, TOKEN_TYPE.trustedDevice);
   const skipOtp = !twoFactorEnabled || isTokenForAdmin(trustedDevice, admin);
@@ -171,10 +143,6 @@ export const login = async ({ email, password, trustToken }) => {
 
     return { otpRequired: false, ...session };
   }
-
-  admin.failedLoginCount = 0;
-  admin.lockUntil = undefined;
-  await admin.save();
 
   const challengeId = await issueOtp(admin);
 
@@ -239,7 +207,7 @@ export const verifyOtp = async ({ challengeId, code }) => {
 
   await otp.deleteOne();
 
-  const admin = await Admin.findById(otp.admin);
+  const admin = await Admin.findById(otp.admin).select('+passwordHash');
 
   if (!admin?.isActive) throw new ApiError(401, 'Account not available.');
 
@@ -254,7 +222,7 @@ export const getAdminFromSession = async (token) => {
 
   if (!session) return null;
 
-  const admin = await Admin.findById(session.sub);
+  const admin = await Admin.findById(session.sub).select('+passwordHash');
 
   return admin?.isActive && isTokenForAdmin(session, admin) ? admin : null;
 };

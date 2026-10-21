@@ -117,10 +117,9 @@ export const update = async (id, changes, actor) => {
   if (name) admin.name = name.trim();
   if (role) admin.role = role;
   if (hasIsActive) admin.isActive = isActive;
+  // A new password signs the admin out everywhere. Role and active status are checked
+  // against the database on every request, so those changes apply immediately.
   if (password) await admin.setPassword(password);
-
-  // A new password, a role change or deactivation signs the admin out everywhere
-  if (password || role || isDeactivating) admin.tokenVersion += 1;
 
   await admin.save();
 
@@ -136,8 +135,7 @@ export const changeOwnPassword = async (actor, { currentPassword = '', newPasswo
 
   assertPassword(newPassword);
 
-  await admin.setPassword(newPassword);
-  admin.tokenVersion += 1;
+  await admin.setPassword(newPassword); // signs this admin out on every other device
   await admin.save();
 
   return { ok: true };
