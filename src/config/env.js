@@ -1,6 +1,9 @@
 require('dotenv').config({ quiet: true });
+const crypto = require('crypto');
 
-const required = ['MONGO_URI', 'JWT_SECRET'];
+// JWT_SECRET is temporarily optional (commented out below). Restore it once JWT_SECRET is set on Vercel.
+// const required = ['MONGO_URI', 'JWT_SECRET'];
+const required = ['MONGO_URI'];
 required.forEach((key) => {
   if (!process.env[key]) {
     throw new Error(`Missing required environment variable: ${key}`);
@@ -21,7 +24,12 @@ module.exports = {
     .map((u) => u.trim())
     .filter(Boolean),
 
-  jwtSecret: process.env.JWT_SECRET,
+  // TEMPORARY fallback while JWT_SECRET is not set: a secret derived from MONGO_URI (private, already configured).
+  // Never a hard-coded value — that would let anyone who reads the code forge admin logins.
+  // Restore to `jwtSecret: process.env.JWT_SECRET,` when JWT_SECRET is added.
+  jwtSecret:
+    process.env.JWT_SECRET ||
+    crypto.createHash('sha256').update(`vini-jwt-fallback:${process.env.MONGO_URI || ''}`).digest('hex'),
 
   // Admin auth
   admin: {
