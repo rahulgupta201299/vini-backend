@@ -4,11 +4,9 @@ const { port } = require('./config/env');
 const { verifySmtp } = require('./common/services/mail.service');
 
 const start = async () => {
-  try {
-    await connectDB();
-  } catch {
-    process.exit(1);
-  }
+  // Don't exit if the DB is unreachable: the server still starts, GET /api/health shows why,
+  // and every API call retries the connection.
+  await connectDB().catch(() => {});
   verifySmtp(); // logs whether OTP emails can be sent
   app.listen(port, () => console.log(`VINI server running on http://localhost:${port}`));
 };

@@ -4,15 +4,15 @@ const crypto = require('crypto');
 // JWT_SECRET is temporarily optional (commented out below). Restore it once JWT_SECRET is set on Vercel.
 // const required = ['MONGO_URI', 'JWT_SECRET'];
 const required = ['MONGO_URI'];
-required.forEach((key) => {
-  if (!process.env[key]) {
-    throw new Error(`Missing required environment variable: ${key}`);
-  }
-});
+// Don't crash on import (on Vercel that turns every request into FUNCTION_INVOCATION_FAILED with no clue why).
+// Missing variables are logged here and reported by GET /api/health; API calls answer 503 until they are set.
+const missingEnv = required.filter((key) => !process.env[key] || !String(process.env[key]).trim());
+if (missingEnv.length) console.error(`[config] Missing required environment variable(s): ${missingEnv.join(', ')}`);
 
 const nodeEnv = process.env.NODE_ENV || 'development';
 
 module.exports = {
+  missingEnv,
   nodeEnv,
   isProd: nodeEnv === 'production',
   port: parseInt(process.env.PORT, 10) || 8000,

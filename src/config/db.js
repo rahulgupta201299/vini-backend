@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { mongoUri, dbName } = require('./env');
+const { mongoUri, dbName, missingEnv } = require('./env');
 
 /**
  * Connects to MongoDB once and reuses the connection.
@@ -8,18 +8,22 @@ const { mongoUri, dbName } = require('./env');
  *   the cached promise means only the first request in a function instance actually connects.
  */
 let connecting = null;
+let lastError = null;
 
 const connectDB = async () => {
+  if (missingEnv.length) throw new Error(`Missing environment variable(s): ${missingEnv.join(', ')}`);
   if (mongoose.connection.readyState === 1) return mongoose.connection;
   if (!connecting) {
     connecting = mongoose
       .connect(mongoUri, { dbName, serverSelectionTimeoutMS: 10000 })
       .then((conn) => {
+        lastError = null;
         console.log(`MongoDB connected: ${conn.connection.host}/${conn.connection.name}`);
         return conn.connection;
       })
       .catch((err) => {
         connecting = null; // allow a retry on the next request
+        lastError = String(err.message || err).replace(/mongodb(\+srv)?:\/\/[^\s]+/g, 'mongodb://***');
         console.error(`MongoDB connection error: ${err.message}`);
         throw err;
       });
@@ -33,3 +37,5 @@ mongoose.connection.on('disconnected', () => {
 });
 
 module.exports = connectDB;
+/** Last connection error (for GET /api/health); the connection string is masked. */
+module.exports.getLastError = () => lastError;

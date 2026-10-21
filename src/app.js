@@ -31,6 +31,9 @@ app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 if (nodeEnv === 'development') app.use(morgan('dev'));
 
+// Health check reports DB/config problems itself (mounted before the DB guard below)
+app.use('/api/health', require('./health/health.routes'));
+
 // Make sure MongoDB is connected before any API route runs (needed on Vercel, where server.js is not used)
 app.use('/api', async (req, res, next) => {
   try {
