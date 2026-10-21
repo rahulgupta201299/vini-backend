@@ -1,16 +1,35 @@
 const mongoose = require('mongoose');
 const { mongoUri, dbName } = require('./env');
 
+/**
+ * Connects to MongoDB once and reuses the connection.
+ * - Local (`npm run dev`): called by server.js at startup.
+ * - Vercel (serverless): Vercel loads src/app.js directly, so app.js also calls this per request;
+ *   the cached promise means only the first request in a function instance actually connects.
+ */
+let connecting = null;
+
 const connectDB = async () => {
-  try {
-    const conn = await mongoose.connect(mongoUri, { dbName });
-    console.log(`MongoDB connected: ${conn.connection.host}/${conn.connection.name}`);
-  } catch (err) {
-    console.error(`MongoDB connection error: ${err.message}`);
-    process.exit(1);
+  if (mongoose.connection.readyState === 1) return mongoose.connection;
+  if (!connecting) {
+    connecting = mongoose
+      .connect(mongoUri, { dbName, serverSelectionTimeoutMS: 10000 })
+      .then((conn) => {
+        console.log(`MongoDB connected: ${conn.connection.host}/${conn.connection.name}`);
+        return conn.connection;
+      })
+      .catch((err) => {
+        connecting = null; // allow a retry on the next request
+        console.error(`MongoDB connection error: ${err.message}`);
+        throw err;
+      });
   }
+  return connecting;
 };
 
-mongoose.connection.on('disconnected', () => console.warn('MongoDB disconnected'));
+mongoose.connection.on('disconnected', () => {
+  connecting = null;
+  console.warn('MongoDB disconnected');
+});
 
 module.exports = connectDB;

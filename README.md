@@ -30,15 +30,17 @@ src/
 │   └── health.routes.js
 └── admin/                    /api/admin/*
     ├── admin.routes.js       mounts every admin section
-    └── login/                /api/admin/auth/*  — login + email OTP 2FA
+    ├── login/                /api/admin/auth/*  — login + email OTP 2FA
+    │   ├── adminOtp.model.js     admin_otps collection (1 per admin, TTL)
+    │   ├── login.service.js
+    │   ├── login.controller.js
+    │   ├── login.middleware.js   requireAdmin, requireRole
+    │   └── login.routes.js
+    └── admins/               /api/admin/admins/*  — admin accounts
         ├── admin.model.js        admins collection
-        ├── adminOtp.model.js     admin_otps collection (1 per admin, TTL)
-        ├── login.service.js
-        ├── login.controller.js
-        ├── login.middleware.js   requireAdmin
-        └── login.routes.js
-scripts/
-└── createAdmin.js            npm run create-admin
+        ├── admin.service.js
+        ├── admin.controller.js
+        └── admin.routes.js
 ```
 
 ### Adding an admin section (e.g. homepage)
@@ -57,4 +59,20 @@ scripts/
 | GET    | `/me`         | `Authorization: Bearer <token>`        | current admin |
 | POST   | `/logout`     |                                        | clears the session cookie |
 
-Add or reset an admin: `ADMIN_EMAIL=… ADMIN_PASSWORD=… [ADMIN_NAME=…] [ADMIN_ROLE=superadmin] npm run create-admin`
+## Admin accounts API (`/api/admin/admins`)
+
+Admin name, email and password live only in MongoDB (`admins`, password hashed) and are managed through these APIs — never through env variables.
+Send `Authorization: Bearer <token>` from `/api/admin/auth/login`. Roles: `superadmin`, `admin`, `editor`.
+
+| Method | Path                 | Who            | Body |
+|--------|----------------------|----------------|------|
+| POST   | `/setup`             | anyone, **only while no admin exists** | `{ name, email, password }` → first superadmin |
+| GET    | `/`                  | superadmin     | — list admins |
+| POST   | `/`                  | superadmin     | `{ name, email, password, role? }` |
+| GET    | `/:id`               | superadmin     | — |
+| PATCH  | `/:id`               | superadmin     | `{ name?, email?, password?, role?, isActive? }` |
+| DELETE | `/:id`               | superadmin     | — |
+| PATCH  | `/me/password`       | any admin      | `{ currentPassword, newPassword }` |
+
+Rules: passwords are at least 8 characters; you can't delete or deactivate yourself; there is always at least one active superadmin;
+changing a password, role or deactivating signs that admin out everywhere.
