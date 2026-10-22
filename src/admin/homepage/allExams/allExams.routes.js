@@ -11,6 +11,7 @@ const router = Router();
 router.get('/', allExamsController.listAll);
 
 router.post('/categories', allExamsController.createCategory);
+router.put('/categories/order', allExamsController.reorderCategories);
 router.patch('/categories/:id', allExamsController.updateCategory);
 
 router.post('/sub-categories', allExamsController.createSubCategory);

@@ -29,6 +29,11 @@ export const updateCategory = async (req, res) => {
   res.json(await allExamsService.updateCategory(req.params.id, req.body ?? {}));
 };
 
+/** PUT /api/admin/homepage/all-exams/categories/order { ids } — every category id, in the new order */
+export const reorderCategories = async (req, res) => {
+  res.json(await allExamsService.reorderCategories(req.body ?? {}));
+};
+
 /** GET /api/admin/homepage/all-exams/sub-categories/:id */
 export const getSubCategory = async (req, res) => {
   res.json(await allExamsService.getSubCategory(req.params.id));

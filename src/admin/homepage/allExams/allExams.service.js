@@ -135,6 +135,32 @@ export const updateCategory = async (id, changes) => {
   return category.toObject();
 };
 
+/**
+ * Saves a new category order (the header "All Exams" menu follows it).
+ * `ids` must list every category exactly once — so an out-of-date screen can't scramble the order.
+ */
+export const reorderCategories = async ({ ids = [] }) => {
+  const categories = await AllExamsCategory.find().select('_id').lean();
+  const knownIds = new Set(categories.map(({ _id }) => String(_id)));
+  const sentIds = new Set(ids.map(String));
+
+  const isComplete =
+    Array.isArray(ids) &&
+    ids.length === knownIds.size &&
+    sentIds.size === ids.length &&
+    [...sentIds].every((id) => knownIds.has(id));
+
+  if (!isComplete) {
+    throw new ApiError(400, 'The category list has changed. Reload the page and try again.');
+  }
+
+  await AllExamsCategory.bulkWrite(
+    ids.map((id, order) => ({ updateOne: { filter: { _id: id }, update: { $set: { order } } } })),
+  );
+
+  return listAll();
+};
+
 /* ---------- admin: sub categories ---------- */
 
 /** Alt text for every banner, written from its title and the exam name (admins don't type it). */

@@ -131,6 +131,7 @@ categories inside active categories; an inactive one's page returns 404 and it l
 | GET    | `/api/admin/homepage/all-exams`                    | admin   | every category with its sub categories (active and inactive, no details)  |
 | POST   | `/api/admin/homepage/all-exams/categories`         | admin   | create `{ name }`                                                         |
 | PATCH  | `/api/admin/homepage/all-exams/categories/:id`     | admin   | rename / activate / deactivate `{ name?, isActive? }`                     |
+| PUT    | `/api/admin/homepage/all-exams/categories/order`   | admin   | new menu order `{ ids }` — every category id, first to last              |
 | GET    | `/api/admin/homepage/all-exams/sub-categories/:id` | admin   | one sub category with details (category joined in)                        |
 | POST   | `/api/admin/homepage/all-exams/sub-categories`     | admin   | create `{ category, name, isActive, menuIcon, details }`                  |
 | PUT    | `/api/admin/homepage/all-exams/sub-categories/:id` | admin   | save the whole sub category                                               |
