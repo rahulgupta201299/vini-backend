@@ -8,9 +8,10 @@
  *   ├── login                      admin accounts
  *   ├── otps                       pending email codes
  *   └── homepage
- *       └── allExams
- *           ├── categories
- *           └── subCategories      joined to categories by `category` id
+ *       ├── allExams
+ *       │   ├── categories
+ *       │   └── subCategories      joined to categories by `category` id
+ *       └── celebrationBanners     festival offer banner under the hero (with start / end dates)
  *
  * New admin sections follow the same pattern, e.g. "admin.homepage.heroBanners".
  */
@@ -19,4 +20,5 @@ export const COLLECTIONS = {
   adminOtps: 'admin.otps',
   allExamsCategories: 'admin.homepage.allExams.categories',
   allExamsSubCategories: 'admin.homepage.allExams.subCategories',
+  celebrationBanners: 'admin.homepage.celebrationBanners',
 };

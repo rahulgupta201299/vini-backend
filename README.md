@@ -131,13 +131,28 @@ categories inside active categories; an inactive one's page returns 404 and it l
 | GET    | `/api/admin/homepage/all-exams`                    | admin   | every category with its sub categories (active and inactive, no details)  |
 | POST   | `/api/admin/homepage/all-exams/categories`         | admin   | create `{ name }`                                                         |
 | PATCH  | `/api/admin/homepage/all-exams/categories/:id`     | admin   | rename / activate / deactivate `{ name?, isActive? }`                     |
-| PUT    | `/api/admin/homepage/all-exams/categories/order`   | admin   | new menu order `{ ids }` — every category id, first to last              |
+| PUT    | `/api/admin/homepage/all-exams/categories/order`   | admin   | new menu order `{ ids }` — every category id, first to last               |
 | GET    | `/api/admin/homepage/all-exams/sub-categories/:id` | admin   | one sub category with details (category joined in)                        |
 | POST   | `/api/admin/homepage/all-exams/sub-categories`     | admin   | create `{ category, name, isActive, menuIcon, details }`                  |
 | PUT    | `/api/admin/homepage/all-exams/sub-categories/:id` | admin   | save the whole sub category                                               |
 | PATCH  | `/api/admin/homepage/all-exams/sub-categories/:id` | admin   | activate / deactivate `{ isActive }`                                      |
 
 Uploaded images are stored inline (data URLs) until S3 is connected — `/api/admin/homepage` accepts bodies up to 15 MB.
+
+## Celebration banner (Homepage → Celebration banner)
+
+A festival sale banner under the hero slider (title, optional line under it, artwork, theme colours and exactly 3 offer cards
+`{ title, priceLabel, price, color, link }`). It shows on the website only while `isActive` and between `startsAt` and `endsAt`;
+after `endsAt` it is switched to inactive automatically. Nothing is deleted.
+
+| Method | Path                                          | Who    | Purpose                                                       |
+| ------ | --------------------------------------------- | ------ | ------------------------------------------------------------- |
+| GET    | `/api/celebration-banner`                     | anyone | `{ banner }` — the banner live right now, or `null`           |
+| GET    | `/api/admin/homepage/celebration-banners`     | admin  | every banner (without images), newest first                   |
+| POST   | `/api/admin/homepage/celebration-banners`     | admin  | create                                                        |
+| GET    | `/api/admin/homepage/celebration-banners/:id` | admin  | one banner                                                    |
+| PUT    | `/api/admin/homepage/celebration-banners/:id` | admin  | save the whole banner                                         |
+| PATCH  | `/api/admin/homepage/celebration-banners/:id` | admin  | `{ isActive }` (an ended banner needs a later end date first) |
 
 ## Database collections
 
