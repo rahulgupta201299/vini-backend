@@ -6,18 +6,19 @@ import express from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
 
-import { notFound, errorHandler } from './common/middlewares/error.middleware.js';
-import ApiError from './common/utils/ApiError.js';
-import connectDB from './config/db.js';
 import { clientUrls, isProd } from './config/env.js';
-import healthRoutes from './health/health.routes.js';
-import routes from './routes.js';
+import { errorHandler, notFound } from './middlewares/error.js';
+import routes from './routes/index.js';
+import ApiError from './utils/ApiError.js';
 
 const LOCALHOST = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
 
 /** Production allows only CLIENT_URLS; development also allows any localhost port. */
-const isAllowedOrigin = (origin) =>
-  clientUrls.includes(origin) || (!isProd && LOCALHOST.test(origin));
+const isAllowedOrigin = (origin) => {
+  if (clientUrls.includes(origin)) return true;
+
+  return !isProd && LOCALHOST.test(origin);
+};
 
 const corsOptions = {
   credentials: true,
@@ -27,16 +28,6 @@ const corsOptions = {
 
     return callback(new ApiError(403, `CORS blocked for origin: ${origin}`));
   },
-};
-
-/** Makes sure MongoDB is connected before any API route runs (needed on Vercel). */
-const requireDatabase = async (_req, _res, next) => {
-  try {
-    await connectDB();
-    next();
-  } catch {
-    next(new ApiError(503, 'Database unavailable. Please try again.'));
-  }
 };
 
 const app = express();
@@ -52,9 +43,7 @@ if (!isProd) app.use(morgan('dev'));
 
 app.get('/', (_req, res) => res.json({ message: 'VINI API is running' }));
 
-// Health reports database problems itself, so it is mounted before the database guard
-app.use('/api/health', healthRoutes);
-app.use('/api', requireDatabase, routes);
+app.use('/api', routes);
 
 app.use(notFound);
 app.use(errorHandler);

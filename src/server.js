@@ -1,9 +1,9 @@
 import './config/env.js'; // first: loads .env before any other module runs
 
 import app from './app.js';
-import { verifySmtp } from './common/services/mail.service.js';
-import connectDB from './config/db.js';
+import connectDB from './config/database.js';
 import { port } from './config/env.js';
+import { verifySmtp } from './utils/email.js';
 
 /** Local server (npm start / npm run dev). On Vercel this file is not used — see app.js. */
 const start = async () => {

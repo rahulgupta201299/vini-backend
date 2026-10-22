@@ -1,6 +1,6 @@
 # vini-backend
 
-Node.js + Express + MongoDB (Mongoose) API for VINI, organised **feature-wise MVC**, written as **ES modules**
+Node.js + Express + MongoDB (Mongoose) API for VINI, organised as **MVC by folder** (`controllers/`, `models/`, `routes/`), written as **ES modules**
 (`"type": "module"` — use `import`/`export`, and include `.js` in relative imports, e.g. `import x from './x.js'`).
 
 ## Run
@@ -22,48 +22,50 @@ Config lives in `.env` (`MONGO_URI`, `DB_NAME`, `JWT_SECRET`, `CLIENT_URLS`, `AD
 
 ```
 src/
-├── server.js                 connect DB → start server
-├── app.js                    express app: security, CORS, parsers, /api, errors
-├── routes.js                 root router (/api)
-├── config/                   env.js, db.js, collections.js (all collection names)
-├── common/                   shared by every feature
-│   ├── middlewares/          error.middleware.js (404 + error handler)
-│   ├── services/             mail.service.js (SMTP)
-│   └── utils/                ApiError.js, validators.js
-├── health/                   GET /api/health
-│   ├── health.controller.js
-│   └── health.routes.js
-└── admin/                    /api/admin/*
-    ├── admin.routes.js       mounts every admin section
-    ├── login/                /api/admin/auth/*  — login + email OTP 2FA
-    │   ├── adminOtp.model.js     collection `admin.otps` (1 per admin, TTL)
-    │   ├── login.constants.js    cookie names, token types
-    │   ├── login.service.js
-    │   ├── login.controller.js
-    │   ├── login.middleware.js   requireAdmin, requireRole
-    │   └── login.routes.js
-    ├── homepage/             /api/admin/homepage/*  — homepage sections
-    │   ├── homepage.routes.js    mounts each section (signed-in admins only)
-    │   └── allExams/             All Exams — categories joined to sub categories
-    │       ├── allExamsCategory.model.js      collection `admin.homepage.allExams.categories`
-    │       ├── allExamsSubCategory.model.js   collection `admin.homepage.allExams.subCategories`
-    │       ├── allExams.service.js
-    │       ├── allExams.controller.js
-    │       ├── allExams.routes.js             admin: /api/admin/homepage/all-exams
-    │       └── allExams.public.routes.js      website: /api/exams
-    └── admins/               /api/admin/admins/*  — admin accounts
-        ├── admin.model.js        collection `admin.login` (admin accounts)
-        ├── admin.service.js
-        ├── admin.controller.js
-        └── admin.routes.js
+├── server.js                         local start: connect DB → check SMTP → listen
+├── app.js                            express app (Vercel entry): security, CORS, parsers, /api, errors
+├── config/
+│   ├── env.js                        every environment variable, read once
+│   ├── database.js                   connectDB() — one shared MongoDB connection
+│   ├── collections.js                every collection name
+│   ├── roles.js                      admin roles (RBAC) + hasAccess()
+│   └── constants.js                  cookie names, token types
+├── controllers/                      request → checks → database → JSON (the business logic lives here)
+│   ├── healthController.js           GET /api/health
+│   ├── authController.js             sign-in, email code, session
+│   ├── adminController.js            admin users (Super Admin)
+│   ├── allExamsController.js         All Exams: website menu + pages, admin categories / sub categories
+│   └── celebrationBannerController.js  festival banner: website + admin
+├── models/                           Mongoose schemas, one per collection
+│   ├── Admin.js                      `admin.login`
+│   ├── AdminOtp.js                   `admin.otps` (one per admin, auto-deleted)
+│   ├── AllExamsCategory.js           `admin.homepage.allExams.categories`
+│   ├── AllExamsSubCategory.js        `admin.homepage.allExams.subCategories`
+│   └── CelebrationBanner.js          `admin.homepage.celebrationBanners`
+├── routes/                           URL → controller, plus sign-in / role checks
+│   ├── index.js                      mounts every routes file under /api
+│   ├── health.js                     /api/health
+│   ├── exams.js                      /api/exams                (website)
+│   ├── celebrationBanner.js          /api/celebration-banner   (website)
+│   ├── auth.js                       /api/admin/auth
+│   ├── admins.js                     /api/admin/admins
+│   ├── allExams.js                   /api/admin/homepage/all-exams
+│   └── celebrationBanners.js         /api/admin/homepage/celebration-banners
+├── middlewares/
+│   ├── auth.js                       requireAdmin, requireAccess(...roles)
+│   ├── database.js                   requireDatabase (connects before each API call)
+│   ├── rateLimit.js                  loginLimiter, setupLimiter
+│   └── error.js                      404 + error handler
+└── utils/                            ApiError, validators, slugify, sanitizeRichText, email (SMTP), token (JWT), otp, dates
 ```
 
-### Adding an admin section (e.g. homepage)
+### Adding a new section (e.g. Homepage → Hero banners)
 
-1. Create `src/admin/<section>/` with its model, service, controller and routes files.
-2. Protect every route with `router.use(requireAdmin, requireAccess(...roles))` from `../login/login.middleware.js`
-   — list the roles that may open the section (Super Admin always passes).
-3. Mount it in `src/admin/admin.routes.js`.
+1. **Model** — `src/models/HeroBanner.js`, with its collection name added to `config/collections.js`.
+2. **Controller** — `src/controllers/heroBannerController.js`: one exported handler per route
+   (`getHeroBanners`, `createHeroBanner`, …) with its checks and queries.
+3. **Routes** — `src/routes/heroBanners.js`, starting with `router.use(requireAdmin, requireAccess(...roles))`
+   (Super Admin always passes); mount it in `src/routes/index.js`.
 4. In the Frontend, add the same roles to `ACCESS` in `src/lib/adminAccess.ts` and wrap the pages in `AccessGate`.
 
 ## Admin auth API (`/api/admin/auth`)
@@ -83,7 +85,7 @@ Send `Authorization: Bearer <token>` from `/api/admin/auth/login`.
 
 ### Roles (RBAC)
 
-An admin has one or more `roles` (`src/admin/admins/admin.roles.js`). They only see — and can only call — the sections their roles open.
+An admin has one or more `roles` (`src/config/roles.js`). They only see — and can only call — the sections their roles open.
 
 | Role key       | Label         | Opens                             |
 | -------------- | ------------- | --------------------------------- |

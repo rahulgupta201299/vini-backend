@@ -27,7 +27,24 @@ export default [
       'object-shorthand': 'error',
       'prefer-template': 'error',
       'prefer-destructuring': ['error', { object: true, array: false }],
-      'no-else-return': 'error',
+      'no-else-return': ['error', { allowElseIf: false }],
+      'no-lonely-if': 'error',
+      // Early returns instead of else-if chains, default values instead of ??
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'IfStatement > IfStatement.alternate',
+          message: 'Use separate `if (…) return …;` checks instead of else if.',
+        },
+        {
+          selector: "LogicalExpression[operator='??']",
+          message: 'Use a default value (destructuring or a parameter) or || instead of ??.',
+        },
+        {
+          selector: "AssignmentExpression[operator='??=']",
+          message: 'Use an if statement instead of ??=.',
+        },
+      ],
       'no-nested-ternary': 'error',
       'no-unneeded-ternary': 'error',
       'default-param-last': 'error',
