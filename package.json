@@ -27,7 +27,8 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.11.2",
     "morgan": "^1.12.1",
-    "nodemailer": "^10.1.7"
+    "nodemailer": "^10.1.7",
+    "sanitize-html": "^2.18.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

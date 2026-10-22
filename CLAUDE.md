@@ -17,7 +17,7 @@ Before finishing any change: `npm run format` then `npm run lint` — both must 
 ### Destructuring and defaults
 
 - Destructure objects and arguments, with defaults where it makes sense:
-  `const { name = 'Admin', role = 'admin' } = body;`
+  `const { name = 'Admin', roles = [] } = body;`
   `const { trustToken = req.cookies?.[TRUSTED_DEVICE_COOKIE] } = req.body ?? {};`
 - Read env vars once in `src/config/env.js` by destructuring `process.env` with defaults.
 - Use `?.` and `??` (`req.body ?? {}`, `admin?.isActive`) instead of long `&&` chains.
@@ -55,5 +55,7 @@ Before finishing any change: `npm run format` then `npm run lint` — both must 
 ### Security (never relax these)
 
 - Admin details (name, email, password) come only from the database via `/api/admin/admins` — never from env variables or code.
-- Never remove `requireAdmin` / `requireRole` from admin routes, and never hard-code secrets.
+- Never remove `requireAdmin` / `requireAccess` from admin routes, and never hard-code secrets.
+- Every new admin section declares who can open it: `router.use(requireAdmin, requireAccess(...roles))`. Roles live in `src/admin/admins/admin.roles.js`; keep them in sync with the Frontend's `src/lib/adminAccess.ts`.
+- Rich text from the admin is cleaned with `sanitizeRichText()` before saving — never store raw HTML from a request.
 - Passwords are stored only as bcrypt hashes; never return `passwordHash` (use `admin.toPublic()`).

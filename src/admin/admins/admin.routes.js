@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 
-import { requireAdmin, requireRole } from '../login/login.middleware.js';
+import { requireAccess, requireAdmin } from '../login/login.middleware.js';
 
 import * as adminController from './admin.controller.js';
 
@@ -20,13 +20,10 @@ router.post('/setup', setupLimiter, adminController.setup);
 // Any signed-in admin
 router.patch('/me/password', requireAdmin, adminController.changeOwnPassword);
 
-// Superadmin only
-router.use(requireAdmin, requireRole('superadmin'));
+// Super Admin only. Admins are never deleted — they are switched inactive instead.
+router.use(requireAdmin, requireAccess('superAdmin'));
+router.get('/roles', adminController.listRoles);
 router.route('/').get(adminController.list).post(adminController.create);
-router
-  .route('/:id')
-  .get(adminController.get)
-  .patch(adminController.update)
-  .delete(adminController.remove);
+router.route('/:id').get(adminController.get).patch(adminController.update);
 
 export default router;

@@ -10,7 +10,7 @@ export const get = async (req, res) => {
   res.json(await adminService.get(req.params.id));
 };
 
-/** POST /api/admin/admins { name, email, password, role? } */
+/** POST /api/admin/admins { name, email, password, roles } */
 export const create = async (req, res) => {
   res.status(201).json(await adminService.create(req.body ?? {}));
 };
@@ -20,7 +20,7 @@ export const setup = async (req, res) => {
   res.status(201).json(await adminService.setup(req.body ?? {}));
 };
 
-/** PATCH /api/admin/admins/:id { name?, email?, password?, role?, isActive? } */
+/** PATCH /api/admin/admins/:id { name?, email?, password?, roles?, isActive? } */
 export const update = async (req, res) => {
   res.json(await adminService.update(req.params.id, req.body ?? {}, req.admin));
 };
@@ -30,8 +30,7 @@ export const changeOwnPassword = async (req, res) => {
   res.json(await adminService.changeOwnPassword(req.admin, req.body ?? {}));
 };
 
-/** DELETE /api/admin/admins/:id */
-export const remove = async (req, res) => {
-  await adminService.remove(req.params.id, req.admin);
-  res.status(204).send();
+/** GET /api/admin/admins/roles — every role with its label and what it opens */
+export const listRoles = (_req, res) => {
+  res.json(adminService.listRoles());
 };

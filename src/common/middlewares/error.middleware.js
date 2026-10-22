@@ -31,9 +31,9 @@ const toHttpError = (error) => {
   if (error.name === 'CastError') return { status: 400, message: `Invalid ${error.path}` };
 
   if (error.code === 11000) {
-    const fields = Object.keys(error.keyValue).join(', ');
+    const [field = 'value'] = Object.keys(error.keyValue ?? {});
 
-    return { status: 409, message: `Duplicate value for ${fields}` };
+    return { status: 409, message: `This ${field} is already in use.` };
   }
 
   // Unexpected errors: don't leak internal details in production

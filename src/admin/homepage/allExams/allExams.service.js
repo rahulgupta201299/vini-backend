@@ -1,4 +1,5 @@
 import ApiError from '../../../common/utils/ApiError.js';
+import sanitizeRichText from '../../../common/utils/sanitizeRichText.js';
 import slugify from '../../../common/utils/slugify.js';
 
 import AllExamsCategory from './allExamsCategory.model.js';
@@ -162,6 +163,7 @@ const pickSubCategoryFields = ({
       ...details,
       banners: withAltText({ banners: details.banners, examName, kind: 'banner' }),
       topRankers: withAltText({ banners: details.topRankers, examName, kind: 'top rankers' }),
+      aboutExam: { ...details.aboutExam, content: sanitizeRichText(details.aboutExam?.content) },
     },
   };
 };

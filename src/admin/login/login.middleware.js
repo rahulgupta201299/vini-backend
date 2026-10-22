@@ -1,4 +1,5 @@
 import ApiError from '../../common/utils/ApiError.js';
+import { hasAccess } from '../admins/admin.roles.js';
 
 import { SESSION_COOKIE } from './login.constants.js';
 import { getAdminFromSession } from './login.service.js';
@@ -22,12 +23,15 @@ export const requireAdmin = async (req, _res, next) => {
   next();
 };
 
-/** Use after requireAdmin. Lets only the given roles through, e.g. requireRole('superadmin'). */
-export const requireRole =
+/**
+ * Use after requireAdmin. Lets through admins with any of the given roles (Super Admin always passes),
+ * e.g. requireAccess('webManager', 'editor').
+ */
+export const requireAccess =
   (...roles) =>
   (req, _res, next) => {
-    if (!roles.includes(req.admin?.role)) {
-      throw new ApiError(403, 'You do not have permission to do this.');
+    if (!req.admin || !hasAccess(req.admin, roles)) {
+      throw new ApiError(403, "You don't have access to this section.");
     }
 
     next();

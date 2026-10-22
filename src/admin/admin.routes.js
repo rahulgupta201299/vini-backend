@@ -14,7 +14,7 @@ import loginRoutes from './login/login.routes.js';
  *     <name>.routes.js       URLs, rate limits, auth
  *
  * The views are the Next.js admin pages in the Frontend.
- * Protect routes with `requireAdmin` / `requireRole(...)` from ./login/login.middleware.js.
+ * Protect routes with `requireAdmin` / `requireAccess(...roles)` from ./login/login.middleware.js.
  */
 const router = Router();
 

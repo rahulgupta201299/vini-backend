@@ -60,9 +60,11 @@ src/
 
 ### Adding an admin section (e.g. homepage)
 
-1. Create `src/admin/homepage/` with `homepage.model.js`, `homepage.service.js`, `homepage.controller.js`, `homepage.routes.js`.
-2. Protect write routes with `requireAdmin` from `../login/login.middleware`.
-3. Mount it in `src/admin/admin.routes.js`: `router.use('/homepage', require('./homepage/homepage.routes'));`
+1. Create `src/admin/<section>/` with its model, service, controller and routes files.
+2. Protect every route with `router.use(requireAdmin, requireAccess(...roles))` from `../login/login.middleware.js`
+   — list the roles that may open the section (Super Admin always passes).
+3. Mount it in `src/admin/admin.routes.js`.
+4. In the Frontend, add the same roles to `ACCESS` in `src/lib/adminAccess.ts` and wrap the pages in `AccessGate`.
 
 ## Admin auth API (`/api/admin/auth`)
 
@@ -76,20 +78,38 @@ src/
 
 ## Admin accounts API (`/api/admin/admins`)
 
-Admin name, email and password live only in MongoDB (`admins`, password hashed) and are managed through these APIs — never through env variables.
-Send `Authorization: Bearer <token>` from `/api/admin/auth/login`. Roles: `superadmin`, `admin`, `editor`.
+Admin name, email and password live only in MongoDB (`admin.login`, password hashed) and are managed through these APIs — never through env variables.
+Send `Authorization: Bearer <token>` from `/api/admin/auth/login`.
 
-| Method | Path           | Who                                    | Body                                             |
-| ------ | -------------- | -------------------------------------- | ------------------------------------------------ |
-| POST   | `/setup`       | anyone, **only while no admin exists** | `{ name, email, password }` → first superadmin   |
-| GET    | `/`            | superadmin                             | — list admins                                    |
-| POST   | `/`            | superadmin                             | `{ name, email, password, role? }`               |
-| GET    | `/:id`         | superadmin                             | —                                                |
-| PATCH  | `/:id`         | superadmin                             | `{ name?, email?, password?, role?, isActive? }` |
-| DELETE | `/:id`         | superadmin                             | —                                                |
-| PATCH  | `/me/password` | any admin                              | `{ currentPassword, newPassword }`               |
+### Roles (RBAC)
 
-Rules: passwords are at least 8 characters; you can't delete or deactivate yourself; there is always at least one active superadmin;
+An admin has one or more `roles` (`src/admin/admins/admin.roles.js`). They only see — and can only call — the sections their roles open.
+
+| Role key       | Label         | Opens                             |
+| -------------- | ------------- | --------------------------------- |
+| `superAdmin`   | Super Admin   | everything, including admin users |
+| `webManager`   | Web Manager   | Web: dashboard and homepage       |
+| `appManager`   | App Manager   | App workspace                     |
+| `seoManager`   | SEO Manager   | Web: SEO                          |
+| `salesManager` | Sales Manager | Web: sales and leads              |
+| `editor`       | Editor        | Web: homepage content (All Exams) |
+| `hrManager`    | HR Manager    | Web: HR and careers               |
+| `storeManager` | Store Manager | Store workspace                   |
+
+`superAdmin` already opens everything, so it is stored on its own (`['superAdmin']`).
+
+| Method | Path           | Who                                    | Body                                              |
+| ------ | -------------- | -------------------------------------- | ------------------------------------------------- |
+| POST   | `/setup`       | anyone, **only while no admin exists** | `{ name, email, password }` → first Super Admin   |
+| PATCH  | `/me/password` | any signed-in admin                    | `{ currentPassword, newPassword }`                |
+| GET    | `/roles`       | Super Admin                            | — `[{ key, label, access }]`                      |
+| GET    | `/`            | Super Admin                            | — list admins                                     |
+| POST   | `/`            | Super Admin                            | `{ name, email, password, roles }`                |
+| GET    | `/:id`         | Super Admin                            | —                                                 |
+| PATCH  | `/:id`         | Super Admin                            | `{ name?, email?, password?, roles?, isActive? }` |
+
+There is no delete — switch an admin off with `isActive: false`.
+Rules: passwords are at least 8 characters; at least one role; you can't deactivate yourself; there is always at least one active Super Admin;
 a new password signs that admin out everywhere; role and active-status changes apply on their next request.
 
 ## All Exams (Homepage → All Exams)
@@ -98,7 +118,7 @@ Two collections, joined by the category id (MongoDB `$lookup` / `populate`):
 
 - `admin.homepage.allExams.categories` — `{ name, isActive, order }`
 - `admin.homepage.allExams.subCategories` — `{ category: <category id>, name, slug, isActive, order, menuIcon: { name, color, background }, details }`
-  where `details` is `{ subTitle, banners[], freeClasses[], batches[], topRankers[], aboutExam: { title, highlights[], paragraphs[] }, faqs[] }`.
+  where `details` is `{ subTitle, banners[], freeClasses[], batches[], topRankers[], aboutExam: { title, highlights[], content } (content is sanitised HTML), faqs[] }`.
   Banners and top rankers have separate `webImageUrl` / `mobileImageUrl`. `slug` is made from the name (page `/goal/<slug>`).
 
 Nothing is deleted: categories and sub categories are switched **active / inactive**. The website only shows active sub

@@ -5,7 +5,7 @@ import mongoose from 'mongoose';
 
 import { COLLECTIONS } from '../../config/collections.js';
 
-export const ROLES = ['superadmin', 'admin', 'editor'];
+import { ROLE_KEYS } from './admin.roles.js';
 
 const PASSWORD_HASH_ROUNDS = 12;
 
@@ -15,7 +15,8 @@ const adminSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     name: { type: String, trim: true, default: 'Admin' },
     passwordHash: { type: String, required: true, select: false },
-    role: { type: String, enum: ROLES, default: 'admin' },
+    // What this admin can open (see admin.roles.js). At least one role.
+    roles: { type: [{ type: String, enum: ROLE_KEYS }], default: [] },
     isActive: { type: Boolean, default: true },
     lastLoginAt: Date,
   },
@@ -40,9 +41,9 @@ adminSchema.methods.passwordFingerprint = function passwordFingerprint() {
 
 /** Safe to send to the client (never includes the password hash). */
 adminSchema.methods.toPublic = function toPublic() {
-  const { id, email, name, role, isActive, lastLoginAt, createdAt, updatedAt } = this;
+  const { id, email, name, roles, isActive, lastLoginAt, createdAt, updatedAt } = this;
 
-  return { id, email, name, role, isActive, lastLoginAt, createdAt, updatedAt };
+  return { id, email, name, roles, isActive, lastLoginAt, createdAt, updatedAt };
 };
 
 export default mongoose.model('Admin', adminSchema);

@@ -73,7 +73,8 @@ const detailsSchema = new Schema(
       // Empty title → the site shows "All About <sub category> Exam"
       title: { type: String, trim: true, default: '' },
       highlights: { type: [highlightSchema], default: [] },
-      paragraphs: { type: [String], default: [] },
+      // Rich text (HTML from the admin editor, cleaned on save): headings, lists, tables, links…
+      content: { type: String, default: '' },
     },
     faqs: { type: [faqSchema], default: [] },
   },
