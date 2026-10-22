@@ -13,7 +13,7 @@
     "format:check": "prettier --check ."
   },
   "engines": {
-    "node": ">=18"
+    "node": "22.x"
   },
   "license": "ISC",
   "dependencies": {
@@ -28,7 +28,7 @@
     "mongoose": "^9.11.2",
     "morgan": "^1.12.1",
     "nodemailer": "^10.1.7",
-    "sanitize-html": "^2.18.1"
+    "sanitize-html": "2.17.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
