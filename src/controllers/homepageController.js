@@ -4,6 +4,8 @@ import GoalCategory from '../models/GoalCategory.js';
 import GoalExam from '../models/GoalExam.js';
 import HeroBanner from '../models/HeroBanner.js';
 import MarketingBanner from '../models/MarketingBanner.js';
+import TopRankersBanner from '../models/TopRankersBanner.js';
+import TopRankersStat from '../models/TopRankersStat.js';
 
 /** The homepage sections that are edited in the admin panel (Web → Homepage). */
 
@@ -65,6 +67,8 @@ export const getSummary = async (_req, res) => {
     secondMarketing,
     goalCategories,
     goalExams,
+    rankerStats,
+    rankerBanners,
     liveCelebration,
   ] = await Promise.all([
     countItems(HeroBanner),
@@ -73,6 +77,8 @@ export const getSummary = async (_req, res) => {
     countItems(MarketingBanner, { placement: 'second' }),
     countItems(GoalCategory),
     countItems(GoalExam),
+    countItems(TopRankersStat),
+    countItems(TopRankersBanner),
     CelebrationBanner.findOne({ isActive: true })
       .where('startsAt')
       .lte(now)
@@ -89,5 +95,6 @@ export const getSummary = async (_req, res) => {
     firstMarketing,
     secondMarketing,
     selectYourGoal: { categories: goalCategories, exams: goalExams },
+    topRankers: { stats: rankerStats, banners: rankerBanners },
   });
 };

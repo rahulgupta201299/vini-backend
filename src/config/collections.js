@@ -14,8 +14,11 @@
  *   adminMarketingBanners          1st and 2nd marketing banner (`placement`)
  *   adminSelectYourGoalCategories  "Select Your Goal" category tabs
  *   adminSelectYourGoalExams       "Select Your Goal" exams (joined to categories by `category` id)
+ *   adminTopRankersStats           "Our Top Rankers" headline boxes (e.g. "1000+ selections")
+ *   adminTopRankersCategories      "Our Top Rankers" tabs (UPSC, State PCS, Other Exams)
+ *   adminTopRankersBanners         result banners (joined to tabs by `category` id)
  *
- * New sections follow the same pattern, e.g. "adminTopRankers".
+ * New sections follow the same pattern, e.g. "adminImpactStats".
  */
 export const COLLECTIONS = {
   adminLogin: 'adminLogin',
@@ -28,4 +31,7 @@ export const COLLECTIONS = {
   adminMarketingBanners: 'adminMarketingBanners',
   adminSelectYourGoalCategories: 'adminSelectYourGoalCategories',
   adminSelectYourGoalExams: 'adminSelectYourGoalExams',
+  adminTopRankersStats: 'adminTopRankersStats',
+  adminTopRankersCategories: 'adminTopRankersCategories',
+  adminTopRankersBanners: 'adminTopRankersBanners',
 };

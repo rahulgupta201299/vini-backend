@@ -15,6 +15,7 @@ import homepage from './homepage.js';
 import homepageSummary from './homepageSummary.js';
 import marketingBanners from './marketingBanners.js';
 import selectYourGoal from './selectYourGoal.js';
+import topRankers from './topRankers.js';
 
 /**
  * Every API route, mounted at /api. Each routes file maps URLs to its controller in ../controllers.
@@ -30,7 +31,7 @@ router.use(requireDatabase);
 // Website (no sign-in)
 router.use('/exams', exams);
 router.use('/celebration-banner', celebrationBanner);
-router.use('/', homepage); // /homepage and /select-your-goal
+router.use('/', homepage); // /homepage, /select-your-goal and /top-rankers
 
 // Admin panel
 router.use('/admin/auth', auth);
@@ -41,6 +42,7 @@ router.use('/admin/homepage/hero-banners', heroBanners);
 router.use('/admin/homepage/free-resources', freeResources);
 router.use('/admin/homepage/marketing-banners', marketingBanners);
 router.use('/admin/homepage/select-your-goal', selectYourGoal);
+router.use('/admin/homepage/top-rankers', topRankers);
 router.use('/admin/homepage/summary', homepageSummary);
 
 export default router;

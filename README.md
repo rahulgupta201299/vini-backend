@@ -166,20 +166,22 @@ after `endsAt` it is switched to inactive automatically. Nothing is deleted.
 Hero slider, Free resources, 1st / 2nd marketing banner and Select Your Goal. Each item has `isActive` and `order`;
 nothing is deleted — items are switched off and reordered. Website reads (no sign-in):
 
-| Method | Path                    | Returns                                                                                  |
-| ------ | ----------------------- | ---------------------------------------------------------------------------------------- |
-| GET    | `/api/homepage`         | `{ heroBanners, freeResources, marketingBanners: { first, second } }` — active, in order |
-| GET    | `/api/select-your-goal` | `[{ category, subcategories: [{ name, logo, href? }] }]` — active, in order              |
+| Method | Path                    | Returns                                                                                            |
+| ------ | ----------------------- | -------------------------------------------------------------------------------------------------- |
+| GET    | `/api/homepage`         | `{ heroBanners, freeResources, marketingBanners: { first, second } }` — active, in order           |
+| GET    | `/api/top-rankers`      | `{ stats: [{ value, label, sublabel, icon }], tabs: [{ id, label, banners }] }` — active, in order |
+| GET    | `/api/select-your-goal` | `[{ category, subcategories: [{ name, logo, href? }] }]` — active, in order                        |
 
 Admin (Web Managers, Editors, Super Admins) — every list has `GET /`, `POST /`, `PUT /order { ids }`, `PUT /:id` (save) and `PATCH /:id { isActive }`:
 
-| Base path                               | Item fields                                                                                                                                                                                                         |
-| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/api/admin/homepage/hero-banners`      | `title, webImageUrl, mobileImageUrl, link`                                                                                                                                                                          |
-| `/api/admin/homepage/free-resources`    | `title, icon, color, link`                                                                                                                                                                                          |
-| `/api/admin/homepage/marketing-banners` | `placement (first / second), title, webImageUrl, mobileImageUrl, link` — list with `?placement=`, order with `{ placement, ids }`                                                                                   |
-| `/api/admin/homepage/select-your-goal`  | `GET /` categories with exams; `POST /categories`, `PATCH /categories/:id { name?, isActive? }`, `PUT /categories/order`; `POST /exams`, `PUT /exams/:id`, `PATCH /exams/:id`, `PUT /exams/order { category, ids }` |
-| `/api/admin/homepage/summary`           | `GET` — active / total counts for the Homepage screen                                                                                                                                                               |
+| Base path                               | Item fields                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/api/admin/homepage/hero-banners`      | `title, webImageUrl, mobileImageUrl, link`                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `/api/admin/homepage/free-resources`    | `title, icon, color, link`                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `/api/admin/homepage/marketing-banners` | `placement (first / second), title, webImageUrl, mobileImageUrl, link` — list with `?placement=`, order with `{ placement, ids }`                                                                                                                                                                                                                                                                                                                          |
+| `/api/admin/homepage/select-your-goal`  | `GET /` categories with exams; `POST /categories`, `PATCH /categories/:id { name?, isActive? }`, `PUT /categories/order`; `POST /exams`, `PUT /exams/:id`, `PATCH /exams/:id`, `PUT /exams/order { category, ids }`                                                                                                                                                                                                                                        |
+| `/api/admin/homepage/top-rankers`       | `GET /` → `{ stats, categories (with banners) }`; boxes: `POST /stats`, `PUT /stats/:id`, `PATCH /stats/:id`, `PUT /stats/order` (`value, label, sublabel, icon`); tabs: `POST /categories`, `PATCH /categories/:id { name?, isActive? }`, `PUT /categories/order`; banners: `POST /banners`, `PUT /banners/:id`, `PATCH /banners/:id`, `PUT /banners/order { category, ids }` (`category, title, webImageUrl, mobileImageUrl, link` — at least one image) |
+| `/api/admin/homepage/summary`           | `GET` — active / total counts for the Homepage screen                                                                                                                                                                                                                                                                                                                                                                                                      |
 
 ## Database collections
 
@@ -197,5 +199,8 @@ vini
 ├── adminFreeResources             free resource tiles
 ├── adminMarketingBanners          1st and 2nd marketing banner (`placement`)
 ├── adminSelectYourGoalCategories  Select Your Goal tabs
-└── adminSelectYourGoalExams       Select Your Goal exams (joined to categories by id)
+├── adminSelectYourGoalExams       Select Your Goal exams (joined to categories by id)
+├── adminTopRankersStats           Top rankers headline boxes
+├── adminTopRankersCategories      Top rankers tabs
+└── adminTopRankersBanners         Top rankers result banners (joined to tabs by id)
 ```
