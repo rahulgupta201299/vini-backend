@@ -13,7 +13,7 @@ const allExamsCategorySchema = new mongoose.Schema(
     // Display order in the header "All Exams" menu
     order: { type: Number, default: 0 },
   },
-  { timestamps: true, collection: COLLECTIONS.allExamsCategories },
+  { timestamps: true, collection: COLLECTIONS.adminAllExamsCategories },
 );
 
 export default mongoose.model('AllExamsCategory', allExamsCategorySchema);

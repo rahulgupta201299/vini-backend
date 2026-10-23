@@ -74,8 +74,8 @@ Before finishing any change: `npm run format` then `npm run lint` — both must 
 ### Database collections
 
 - Collection names live only in `src/config/collections.js` — models use `COLLECTIONS.<name>`, never a string.
-- Name new collections by their place in the admin structure with dots: `admin.<section>.<subsection>…`
-  (e.g. `admin.homepage.heroBanners`). MongoDB has no nested collections; the dots show the hierarchy.
+- Name collections in camelCase, starting with the area that owns the data, then what it holds —
+  no page names and no dots: `adminAllExamsCategories`, `adminHeroBanners` (new: e.g. `adminTopRankers`).
 
 ### Security (never relax these)
 

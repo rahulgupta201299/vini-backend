@@ -101,7 +101,7 @@ const allExamsSubCategorySchema = new Schema(
     },
     details: { type: detailsSchema, default: () => ({}) },
   },
-  { timestamps: true, collection: COLLECTIONS.allExamsSubCategories },
+  { timestamps: true, collection: COLLECTIONS.adminAllExamsSubCategories },
 );
 
 export default mongoose.model('AllExamsSubCategory', allExamsSubCategorySchema);

@@ -14,7 +14,7 @@ const heroBannerSchema = new mongoose.Schema(
     isActive: { type: Boolean, default: true },
     order: { type: Number, default: 0 },
   },
-  { timestamps: true, versionKey: false, collection: COLLECTIONS.heroBanners },
+  { timestamps: true, versionKey: false, collection: COLLECTIONS.adminHeroBanners },
 );
 
 export default mongoose.model('HeroBanner', heroBannerSchema);

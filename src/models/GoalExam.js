@@ -20,7 +20,7 @@ const goalExamSchema = new mongoose.Schema(
     isActive: { type: Boolean, default: true },
     order: { type: Number, default: 0 },
   },
-  { timestamps: true, versionKey: false, collection: COLLECTIONS.goalExams },
+  { timestamps: true, versionKey: false, collection: COLLECTIONS.adminSelectYourGoalExams },
 );
 
 export default mongoose.model('GoalExam', goalExamSchema);

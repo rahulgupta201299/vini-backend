@@ -9,7 +9,7 @@ import { ROLE_KEYS } from '../config/roles.js';
 
 const PASSWORD_HASH_ROUNDS = 12;
 
-/** Admin accounts (collection admin.login). Managed through /api/admin/admins — never through env variables. */
+/** Admin accounts (collection adminLogin). Managed through /api/admin/admins — never through env variables. */
 const adminSchema = new mongoose.Schema(
   {
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },

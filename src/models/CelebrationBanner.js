@@ -56,7 +56,7 @@ const celebrationBannerSchema = new Schema(
     endsAt: { type: Date, required: true },
     isActive: { type: Boolean, default: true },
   },
-  { timestamps: true, collection: COLLECTIONS.celebrationBanners },
+  { timestamps: true, collection: COLLECTIONS.adminCelebrationBanners },
 );
 
 celebrationBannerSchema.index({ isActive: 1, startsAt: 1, endsAt: 1 });

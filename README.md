@@ -37,11 +37,16 @@ src/
 │   ├── allExamsController.js         All Exams: website menu + pages, admin categories / sub categories
 │   └── celebrationBannerController.js  festival banner: website + admin
 ├── models/                           Mongoose schemas, one per collection
-│   ├── Admin.js                      `admin.login`
-│   ├── AdminOtp.js                   `admin.otps` (one per admin, auto-deleted)
-│   ├── AllExamsCategory.js           `admin.homepage.allExams.categories`
-│   ├── AllExamsSubCategory.js        `admin.homepage.allExams.subCategories`
-│   └── CelebrationBanner.js          `admin.homepage.celebrationBanners`
+│   ├── Admin.js                      `adminLogin`
+│   ├── AdminOtp.js                   `adminOtps` (one per admin, auto-deleted)
+│   ├── AllExamsCategory.js           `adminAllExamsCategories`
+│   ├── AllExamsSubCategory.js        `adminAllExamsSubCategories`
+│   ├── CelebrationBanner.js          `adminCelebrationBanners`
+│   ├── HeroBanner.js                 `adminHeroBanners`
+│   ├── FreeResource.js               `adminFreeResources`
+│   ├── MarketingBanner.js            `adminMarketingBanners`
+│   ├── GoalCategory.js               `adminSelectYourGoalCategories`
+│   └── GoalExam.js                   `adminSelectYourGoalExams`
 ├── routes/                           URL → controller, plus sign-in / role checks
 │   ├── index.js                      mounts every routes file under /api
 │   ├── health.js                     /api/health
@@ -80,7 +85,7 @@ src/
 
 ## Admin accounts API (`/api/admin/admins`)
 
-Admin name, email and password live only in MongoDB (`admin.login`, password hashed) and are managed through these APIs — never through env variables.
+Admin name, email and password live only in MongoDB (`adminLogin`, password hashed) and are managed through these APIs — never through env variables.
 Send `Authorization: Bearer <token>` from `/api/admin/auth/login`.
 
 ### Roles (RBAC)
@@ -118,8 +123,8 @@ a new password signs that admin out everywhere; role and active-status changes a
 
 Two collections, joined by the category id (MongoDB `$lookup` / `populate`):
 
-- `admin.homepage.allExams.categories` — `{ name, isActive, order }`
-- `admin.homepage.allExams.subCategories` — `{ category: <category id>, name, slug, isActive, order, menuIcon: { name, color, background }, details }`
+- `adminAllExamsCategories` — `{ name, isActive, order }`
+- `adminAllExamsSubCategories` — `{ category: <category id>, name, slug, isActive, order, menuIcon: { name, color, background }, details }`
   where `details` is `{ subTitle, banners[], freeClasses[], batches[], topRankers[], aboutExam: { title, highlights[], content } (content is sanitised HTML), faqs[] }`.
   Banners and top rankers have separate `webImageUrl` / `mobileImageUrl`. `slug` is made from the name (page `/goal/<slug>`).
 
@@ -178,13 +183,19 @@ Admin (Web Managers, Editors, Super Admins) — every list has `GET /`, `POST /`
 
 ## Database collections
 
-MongoDB has no nested collections, so the structure is written into the names with dots
-(all names live in `src/config/collections.js`):
+Database `vini`. Names are camelCase, starting with the area that owns the data (`admin…` for everything the
+admin panel manages) — see `src/config/collections.js`.
 
 ```
-vini (database)
-├── admin.login                             admin accounts
-├── admin.otps                              pending email codes (deleted automatically when expired)
-├── admin.homepage.allExams.categories      All Exams categories
-└── admin.homepage.allExams.subCategories   All Exams sub categories (joined to categories by id)
+vini
+├── adminLogin                     admin accounts
+├── adminOtps                      pending email codes (deleted automatically when expired)
+├── adminAllExamsCategories        All Exams categories
+├── adminAllExamsSubCategories     All Exams sub categories (joined to categories by id)
+├── adminCelebrationBanners        festival offer banner
+├── adminHeroBanners               hero slider
+├── adminFreeResources             free resource tiles
+├── adminMarketingBanners          1st and 2nd marketing banner (`placement`)
+├── adminSelectYourGoalCategories  Select Your Goal tabs
+└── adminSelectYourGoalExams       Select Your Goal exams (joined to categories by id)
 ```

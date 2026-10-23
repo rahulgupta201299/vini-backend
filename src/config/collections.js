@@ -1,35 +1,31 @@
 /**
- * MongoDB collection names, in one place.
+ * MongoDB collection names, in one place. Models use COLLECTIONS.<name> — never a string.
  *
- * MongoDB has no collections inside collections, so the structure is shown with dots in the name
- * (database tools list them as a flat, grouped list):
+ * Naming: camelCase, starting with the area that owns the data ("admin" for everything the admin
+ * panel manages), then what it holds — no page names, so a section can move without a rename.
  *
- *   admin
- *   ├── login                      admin accounts
- *   ├── otps                       pending email codes
- *   └── homepage
- *       ├── allExams
- *       │   ├── categories
- *       │   └── subCategories      joined to categories by `category` id
- *       ├── celebrationBanners     festival offer banner under the hero (with start / end dates)
- *       ├── heroBanners            top slider
- *       ├── freeResources          "Browse Our Free Resources" tiles
- *       ├── marketingBanners       1st and 2nd marketing banner (`placement`)
- *       └── selectYourGoal
- *           ├── categories
- *           └── exams              joined to categories by `category` id
+ *   adminLogin                     admin accounts
+ *   adminOtps                      pending email codes (deleted automatically when expired)
+ *   adminAllExamsCategories        All Exams categories
+ *   adminAllExamsSubCategories     All Exams sub categories (joined to categories by `category` id)
+ *   adminCelebrationBanners        festival offer banner (with start / end dates)
+ *   adminHeroBanners               hero slider
+ *   adminFreeResources             "Browse Our Free Resources" tiles
+ *   adminMarketingBanners          1st and 2nd marketing banner (`placement`)
+ *   adminSelectYourGoalCategories  "Select Your Goal" category tabs
+ *   adminSelectYourGoalExams       "Select Your Goal" exams (joined to categories by `category` id)
  *
- * New admin sections follow the same pattern, e.g. "admin.homepage.heroBanners".
+ * New sections follow the same pattern, e.g. "adminTopRankers".
  */
 export const COLLECTIONS = {
-  adminLogin: 'admin.login',
-  adminOtps: 'admin.otps',
-  allExamsCategories: 'admin.homepage.allExams.categories',
-  allExamsSubCategories: 'admin.homepage.allExams.subCategories',
-  celebrationBanners: 'admin.homepage.celebrationBanners',
-  heroBanners: 'admin.homepage.heroBanners',
-  freeResources: 'admin.homepage.freeResources',
-  marketingBanners: 'admin.homepage.marketingBanners',
-  goalCategories: 'admin.homepage.selectYourGoal.categories',
-  goalExams: 'admin.homepage.selectYourGoal.exams',
+  adminLogin: 'adminLogin',
+  adminOtps: 'adminOtps',
+  adminAllExamsCategories: 'adminAllExamsCategories',
+  adminAllExamsSubCategories: 'adminAllExamsSubCategories',
+  adminCelebrationBanners: 'adminCelebrationBanners',
+  adminHeroBanners: 'adminHeroBanners',
+  adminFreeResources: 'adminFreeResources',
+  adminMarketingBanners: 'adminMarketingBanners',
+  adminSelectYourGoalCategories: 'adminSelectYourGoalCategories',
+  adminSelectYourGoalExams: 'adminSelectYourGoalExams',
 };

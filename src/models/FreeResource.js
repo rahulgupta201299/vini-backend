@@ -19,7 +19,7 @@ const freeResourceSchema = new mongoose.Schema(
     isActive: { type: Boolean, default: true },
     order: { type: Number, default: 0 },
   },
-  { timestamps: true, versionKey: false, collection: COLLECTIONS.freeResources },
+  { timestamps: true, versionKey: false, collection: COLLECTIONS.adminFreeResources },
 );
 
 export default mongoose.model('FreeResource', freeResourceSchema);
