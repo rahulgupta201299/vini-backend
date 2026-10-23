@@ -2,6 +2,7 @@ import AllExamsCategory from '../models/AllExamsCategory.js';
 import AllExamsSubCategory from '../models/AllExamsSubCategory.js';
 import ApiError from '../utils/ApiError.js';
 import sanitizeRichText from '../utils/sanitizeRichText.js';
+import { nextOrder, saveOrder } from '../utils/ordering.js';
 import slugify from '../utils/slugify.js';
 
 /**
@@ -37,15 +38,6 @@ const findSubCategoryOrThrow = async (id) => {
   if (!subCategory) throw new ApiError(404, 'Sub category not found.');
 
   return subCategory;
-};
-
-/** Position after the last item, so new items go to the end of the list. */
-const nextOrder = async (Model, filter = {}) => {
-  const last = await Model.findOne(filter).sort({ order: -1 }).select('order').lean();
-
-  if (!last) return 0;
-
-  return last.order + 1;
 };
 
 /**
@@ -237,26 +229,7 @@ export const updateCategory = async (req, res) => {
 export const reorderCategories = async (req, res) => {
   const { ids = [] } = req.body || {};
 
-  if (!Array.isArray(ids)) throw new ApiError(400, 'ids must be a list of category ids.');
-
-  const categories = await AllExamsCategory.find().select('_id').lean();
-  const knownIds = new Set(categories.map(({ _id }) => String(_id)));
-  const sentIds = new Set(ids.map(String));
-
-  const isComplete =
-    ids.length === knownIds.size &&
-    sentIds.size === ids.length &&
-    [...sentIds].every((id) => knownIds.has(id));
-
-  if (!isComplete) {
-    throw new ApiError(400, 'The category list has changed. Reload the page and try again.');
-  }
-
-  const updates = ids.map((id, order) => ({
-    updateOne: { filter: { _id: id }, update: { $set: { order } } },
-  }));
-
-  await AllExamsCategory.bulkWrite(updates);
+  await saveOrder(AllExamsCategory, ids);
 
   res.json(await getAdminList());
 };

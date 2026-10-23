@@ -156,6 +156,26 @@ after `endsAt` it is switched to inactive automatically. Nothing is deleted.
 | PUT    | `/api/admin/homepage/celebration-banners/:id` | admin  | save the whole banner                                         |
 | PATCH  | `/api/admin/homepage/celebration-banners/:id` | admin  | `{ isActive }` (an ended banner needs a later end date first) |
 
+## Homepage sections (Web → Homepage)
+
+Hero slider, Free resources, 1st / 2nd marketing banner and Select Your Goal. Each item has `isActive` and `order`;
+nothing is deleted — items are switched off and reordered. Website reads (no sign-in):
+
+| Method | Path                    | Returns                                                                                  |
+| ------ | ----------------------- | ---------------------------------------------------------------------------------------- |
+| GET    | `/api/homepage`         | `{ heroBanners, freeResources, marketingBanners: { first, second } }` — active, in order |
+| GET    | `/api/select-your-goal` | `[{ category, subcategories: [{ name, logo, href? }] }]` — active, in order              |
+
+Admin (Web Managers, Editors, Super Admins) — every list has `GET /`, `POST /`, `PUT /order { ids }`, `PUT /:id` (save) and `PATCH /:id { isActive }`:
+
+| Base path                               | Item fields                                                                                                                                                                                                         |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/api/admin/homepage/hero-banners`      | `title, webImageUrl, mobileImageUrl, link`                                                                                                                                                                          |
+| `/api/admin/homepage/free-resources`    | `title, icon, color, link`                                                                                                                                                                                          |
+| `/api/admin/homepage/marketing-banners` | `placement (first / second), title, webImageUrl, mobileImageUrl, link` — list with `?placement=`, order with `{ placement, ids }`                                                                                   |
+| `/api/admin/homepage/select-your-goal`  | `GET /` categories with exams; `POST /categories`, `PATCH /categories/:id { name?, isActive? }`, `PUT /categories/order`; `POST /exams`, `PUT /exams/:id`, `PATCH /exams/:id`, `PUT /exams/order { category, ids }` |
+| `/api/admin/homepage/summary`           | `GET` — active / total counts for the Homepage screen                                                                                                                                                               |
+
 ## Database collections
 
 MongoDB has no nested collections, so the structure is written into the names with dots
