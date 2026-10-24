@@ -8,6 +8,9 @@
  *   adminOtps                      pending email codes (deleted automatically when expired)
  *   adminAllExamsCategories        All Exams categories
  *   adminAllExamsSubCategories     All Exams sub categories (joined to categories by `category` id)
+ *   adminExamDetails               exam page content (banners, classes, batches, about, FAQs), joined to
+ *                                  All Exams sub categories / Select Your Goal exams by `exam` id
+ *   adminFooterSections            footer: Company, Free Learning Resources, Our Ecosystem Brands
  *   adminCelebrationBanners        festival offer banner (with start / end dates)
  *   adminHeroBanners               hero slider
  *   adminFreeResources             "Browse Our Free Resources" tiles
@@ -25,6 +28,8 @@ export const COLLECTIONS = {
   adminOtps: 'adminOtps',
   adminAllExamsCategories: 'adminAllExamsCategories',
   adminAllExamsSubCategories: 'adminAllExamsSubCategories',
+  adminExamDetails: 'adminExamDetails',
+  adminFooterSections: 'adminFooterSections',
   adminCelebrationBanners: 'adminCelebrationBanners',
   adminHeroBanners: 'adminHeroBanners',
   adminFreeResources: 'adminFreeResources',

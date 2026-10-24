@@ -1,13 +1,19 @@
 import AllExamsCategory from '../models/AllExamsCategory.js';
 import AllExamsSubCategory from '../models/AllExamsSubCategory.js';
 import ApiError from '../utils/ApiError.js';
-import sanitizeRichText from '../utils/sanitizeRichText.js';
+import {
+  buildExamDetails,
+  examDetailsLookup,
+  toDetails,
+  toObjectIdOrThrow,
+} from '../utils/examDetails.js';
 import { nextOrder, saveOrder } from '../utils/ordering.js';
 import slugify from '../utils/slugify.js';
 
 /**
  * Homepage → All Exams: categories (e.g. "Only IAS") and their sub categories (e.g. "UPSC CSE 2026/27"),
  * each with its own page at /goal/<slug>. Nothing is deleted — items are switched active / inactive.
+ * A sub category's page content lives in adminExamDetails; its `details` holds that document's id.
  */
 
 const BY_ORDER = { order: 1, createdAt: 1 };
@@ -81,17 +87,7 @@ const assertSlugIsFree = async (slug, exceptId) => {
   if (isTaken) throw new ApiError(409, 'A sub category with this name already exists.');
 };
 
-/** Alt text for every banner, written from its title and the exam name (admins don't type it). */
-const withAltText = ({ banners = [], examName, kind }) =>
-  banners.map((banner, index) => {
-    const { title } = banner;
-
-    if (title) return { ...banner, alt: `${title} — ${examName}` };
-
-    return { ...banner, alt: `${examName} ${kind} ${index + 1}` };
-  });
-
-/** The fields an admin may set on a sub category. Anything else in the body is ignored. */
+/** The fields an admin may set on a sub category, and its page details. Anything else in the body is ignored. */
 const pickSubCategoryFields = ({
   category,
   name = '',
@@ -99,21 +95,9 @@ const pickSubCategoryFields = ({
   menuIcon = {},
   details = {},
 }) => {
-  const examName = String(name).trim();
-  const { banners = [], topRankers = [], aboutExam = {} } = details;
+  const fields = { category, name: String(name).trim(), isActive, menuIcon };
 
-  return {
-    category,
-    name: examName,
-    isActive,
-    menuIcon,
-    details: {
-      ...details,
-      banners: withAltText({ banners, examName, kind: 'banner' }),
-      topRankers: withAltText({ banners: topRankers, examName, kind: 'top rankers' }),
-      aboutExam: { ...aboutExam, content: sanitizeRichText(aboutExam.content) },
-    },
-  };
+  return { fields, details };
 };
 
 /** Checks a sub category before saving and returns its page address (slug). */
@@ -129,16 +113,43 @@ const validateSubCategory = async ({ name, isActive, category }) => {
   return slug;
 };
 
-/** One sub category with its category's name and status joined in. */
+/** Sub categories with their category and page details joined in (MongoDB $lookup on ids). */
+const findSubCategoriesWithDetails = (filter) =>
+  AllExamsSubCategory.aggregate()
+    .match(filter)
+    .lookup({
+      from: AllExamsCategory.collection.name,
+      localField: 'category',
+      foreignField: '_id',
+      as: 'category',
+    })
+    .unwind('$category')
+    .lookup(examDetailsLookup());
+
+/** One sub category with its category's name / status and its page details. */
 const getSubCategoryWithCategory = async (id) => {
-  const subCategory = await AllExamsSubCategory.findById(id)
-    .populate('category', 'name isActive')
-    .lean()
-    .catch(() => null);
+  const _id = toObjectIdOrThrow(id, 'Sub category');
+  const [subCategory] = await findSubCategoriesWithDetails({ _id });
 
   if (!subCategory) throw new ApiError(404, 'Sub category not found.');
 
-  return subCategory;
+  const { category, examDetails, ...rest } = subCategory;
+  const { name, isActive } = category;
+
+  return {
+    ...rest,
+    category: { _id: category._id, name, isActive },
+    details: toDetails(examDetails[0]),
+  };
+};
+
+/** Saves a sub category and its page details together (both are checked before either is written). */
+const saveSubCategory = async (subCategory, details) => {
+  const detailsDoc = await buildExamDetails({ exam: subCategory, source: 'allExams', details });
+
+  await subCategory.validate();
+  await detailsDoc.save();
+  await subCategory.save();
 };
 
 /* ---------- public (website) — only active categories and sub categories ---------- */
@@ -160,16 +171,19 @@ export const getExamMenu = async (_req, res) => {
 /** GET /api/exams/:slug — one exam page: { category, subCategory, slug, menuIcon, details } */
 export const getExamBySlug = async (req, res) => {
   const { slug } = req.params;
+  const [subCategory] = await findSubCategoriesWithDetails({ slug, isActive: true });
 
-  const subCategory = await AllExamsSubCategory.findOne({ slug, isActive: true })
-    .populate('category', 'name isActive')
-    .lean();
+  if (!subCategory?.category.isActive) throw new ApiError(404, 'Exam not found.');
 
-  if (!subCategory?.category?.isActive) throw new ApiError(404, 'Exam not found.');
+  const { category, name, menuIcon, examDetails } = subCategory;
 
-  const { category, name, menuIcon, details } = subCategory;
-
-  res.json({ category: category.name, subCategory: name, slug, menuIcon, details });
+  res.json({
+    category: category.name,
+    subCategory: name,
+    slug,
+    menuIcon,
+    details: toDetails(examDetails[0]),
+  });
 };
 
 /* ---------- admin: overview ---------- */
@@ -243,27 +257,29 @@ export const getSubCategory = async (req, res) => {
 
 /** POST /api/admin/homepage/all-exams/sub-categories { category, name, isActive, menuIcon, details } */
 export const createSubCategory = async (req, res) => {
-  const fields = pickSubCategoryFields(req.body || {});
+  const { fields, details } = pickSubCategoryFields(req.body || {});
   const slug = await validateSubCategory(fields);
 
   await assertSlugIsFree(slug);
 
   const order = await nextOrder(AllExamsSubCategory, { category: fields.category });
-  const { _id } = await AllExamsSubCategory.create({ ...fields, slug, order });
+  const subCategory = new AllExamsSubCategory({ ...fields, slug, order });
 
-  res.status(201).json(await getSubCategoryWithCategory(_id));
+  await saveSubCategory(subCategory, details);
+
+  res.status(201).json(await getSubCategoryWithCategory(subCategory._id));
 };
 
-/** PUT /api/admin/homepage/all-exams/sub-categories/:id — saves the whole sub category */
+/** PUT /api/admin/homepage/all-exams/sub-categories/:id — saves the whole sub category and its page details */
 export const updateSubCategory = async (req, res) => {
   const subCategory = await findSubCategoryOrThrow(req.params.id);
-  const fields = pickSubCategoryFields(req.body || {});
+  const { fields, details } = pickSubCategoryFields(req.body || {});
   const slug = await validateSubCategory(fields);
 
   await assertSlugIsFree(slug, subCategory._id);
 
   subCategory.set({ ...fields, slug });
-  await subCategory.save();
+  await saveSubCategory(subCategory, details);
 
   res.json(await getSubCategoryWithCategory(subCategory._id));
 };

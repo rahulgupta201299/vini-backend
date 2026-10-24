@@ -1,4 +1,5 @@
 import CelebrationBanner from '../models/CelebrationBanner.js';
+import FooterSection from '../models/FooterSection.js';
 import FreeResource from '../models/FreeResource.js';
 import GoalCategory from '../models/GoalCategory.js';
 import GoalExam from '../models/GoalExam.js';
@@ -69,6 +70,7 @@ export const getSummary = async (_req, res) => {
     goalExams,
     rankerStats,
     rankerBanners,
+    footerSections,
     liveCelebration,
   ] = await Promise.all([
     countItems(HeroBanner),
@@ -79,6 +81,7 @@ export const getSummary = async (_req, res) => {
     countItems(GoalExam),
     countItems(TopRankersStat),
     countItems(TopRankersBanner),
+    countItems(FooterSection),
     CelebrationBanner.findOne({ isActive: true })
       .where('startsAt')
       .lte(now)
@@ -96,5 +99,6 @@ export const getSummary = async (_req, res) => {
     secondMarketing,
     selectYourGoal: { categories: goalCategories, exams: goalExams },
     topRankers: { stats: rankerStats, banners: rankerBanners },
+    footer: footerSections,
   });
 };

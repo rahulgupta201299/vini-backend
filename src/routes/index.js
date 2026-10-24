@@ -8,6 +8,7 @@ import auth from './auth.js';
 import celebrationBanner from './celebrationBanner.js';
 import celebrationBanners from './celebrationBanners.js';
 import exams from './exams.js';
+import footer from './footer.js';
 import freeResources from './freeResources.js';
 import health from './health.js';
 import heroBanners from './heroBanners.js';
@@ -31,7 +32,7 @@ router.use(requireDatabase);
 // Website (no sign-in)
 router.use('/exams', exams);
 router.use('/celebration-banner', celebrationBanner);
-router.use('/', homepage); // /homepage, /select-your-goal and /top-rankers
+router.use('/', homepage); // /homepage, /select-your-goal, /top-rankers and /footer
 
 // Admin panel
 router.use('/admin/auth', auth);
@@ -43,6 +44,7 @@ router.use('/admin/homepage/free-resources', freeResources);
 router.use('/admin/homepage/marketing-banners', marketingBanners);
 router.use('/admin/homepage/select-your-goal', selectYourGoal);
 router.use('/admin/homepage/top-rankers', topRankers);
+router.use('/admin/homepage/footer', footer);
 router.use('/admin/homepage/summary', homepageSummary);
 
 export default router;

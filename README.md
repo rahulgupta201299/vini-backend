@@ -46,7 +46,9 @@ src/
 │   ├── FreeResource.js               `adminFreeResources`
 │   ├── MarketingBanner.js            `adminMarketingBanners`
 │   ├── GoalCategory.js               `adminSelectYourGoalCategories`
-│   └── GoalExam.js                   `adminSelectYourGoalExams`
+│   ├── GoalExam.js                   `adminSelectYourGoalExams`
+│   ├── ExamDetails.js                `adminExamDetails` (one exam page, joined by exam id)
+│   └── FooterSection.js              `adminFooterSections`
 ├── routes/                           URL → controller, plus sign-in / role checks
 │   ├── index.js                      mounts every routes file under /api
 │   ├── health.js                     /api/health
@@ -55,7 +57,8 @@ src/
 │   ├── auth.js                       /api/admin/auth
 │   ├── admins.js                     /api/admin/admins
 │   ├── allExams.js                   /api/admin/homepage/all-exams
-│   └── celebrationBanners.js         /api/admin/homepage/celebration-banners
+│   ├── celebrationBanners.js         /api/admin/homepage/celebration-banners
+│   └── footer.js                     /api/admin/homepage/footer
 ├── middlewares/
 │   ├── auth.js                       requireAdmin, requireAccess(...roles)
 │   ├── database.js                   requireDatabase (connects before each API call)
@@ -124,9 +127,12 @@ a new password signs that admin out everywhere; role and active-status changes a
 Two collections, joined by the category id (MongoDB `$lookup` / `populate`):
 
 - `adminAllExamsCategories` — `{ name, isActive, order }`
-- `adminAllExamsSubCategories` — `{ category: <category id>, name, slug, isActive, order, menuIcon: { name, color, background }, details }`
-  where `details` is `{ subTitle, banners[], freeClasses[], batches[], topRankers[], aboutExam: { title, highlights[], content } (content is sanitised HTML), faqs[] }`.
-  Banners and top rankers have separate `webImageUrl` / `mobileImageUrl`. `slug` is made from the name (page `/goal/<slug>`).
+- `adminAllExamsSubCategories` — `{ category: <category id>, name, slug, isActive, order, menuIcon: { name, color, background }, details: <adminExamDetails id> }`
+- `adminExamDetails` — `{ exam: <sub category or goal exam id>, source: allExams | selectYourGoal, subTitle, banners, freeClasses, batches, topRankers, aboutExam, faqs }` — an exam's page. The exam's `details` holds this document's id (Select Your Goal exams: `null` until the page is saved); `exam` points back.
+
+**One-off after deploying:** `npm run db:link-exam-details -- --dry-run`, then `npm run db:link-exam-details`. It backs up the old embedded `details` to `backups/`, refreshes any page edited on the old admin, and sets every exam's `details` to its adminExamDetails id. Safe to re-run.
+where `details` is `{ subTitle, banners[], freeClasses[], batches[], topRankers[], aboutExam: { title, highlights[], content } (content is sanitised HTML), faqs[] }`.
+Banners and top rankers have separate `webImageUrl` / `mobileImageUrl`. `slug` is made from the name (page `/goal/<slug>`).
 
 Nothing is deleted: categories and sub categories are switched **active / inactive**. The website only shows active sub
 categories inside active categories; an inactive one's page returns 404 and it leaves the header menu.
@@ -166,11 +172,13 @@ after `endsAt` it is switched to inactive automatically. Nothing is deleted.
 Hero slider, Free resources, 1st / 2nd marketing banner and Select Your Goal. Each item has `isActive` and `order`;
 nothing is deleted — items are switched off and reordered. Website reads (no sign-in):
 
-| Method | Path                    | Returns                                                                                            |
-| ------ | ----------------------- | -------------------------------------------------------------------------------------------------- |
-| GET    | `/api/homepage`         | `{ heroBanners, freeResources, marketingBanners: { first, second } }` — active, in order           |
-| GET    | `/api/top-rankers`      | `{ stats: [{ value, label, sublabel, icon }], tabs: [{ id, label, banners }] }` — active, in order |
-| GET    | `/api/select-your-goal` | `[{ category, subcategories: [{ name, logo, href? }] }]` — active, in order                        |
+| Method | Path                          | Returns                                                                                                 |
+| ------ | ----------------------------- | ------------------------------------------------------------------------------------------------------- |
+| GET    | `/api/homepage`               | `{ heroBanners, freeResources, marketingBanners: { first, second } }` — active, in order                |
+| GET    | `/api/top-rankers`            | `{ stats: [{ value, label, sublabel, icon }], tabs: [{ id, label, banners }] }` — active, in order      |
+| GET    | `/api/select-your-goal`       | `[{ category, subcategories: [{ name, logo, href? }] }]` — active, in order                             |
+| GET    | `/api/select-your-goal/:slug` | one active goal exam `{ category, name, slug, details }` — `details` is `null` until saved in the admin |
+| GET    | `/api/footer`                 | `{ company, freeLearningResources, ecosystemBrands }` — `null` for an inactive section                  |
 
 Admin (Web Managers, Editors, Super Admins) — every list has `GET /`, `POST /`, `PUT /order { ids }`, `PUT /:id` (save) and `PATCH /:id { isActive }`:
 
@@ -179,8 +187,9 @@ Admin (Web Managers, Editors, Super Admins) — every list has `GET /`, `POST /`
 | `/api/admin/homepage/hero-banners`      | `title, webImageUrl, mobileImageUrl, link`                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `/api/admin/homepage/free-resources`    | `title, icon, color, link`                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `/api/admin/homepage/marketing-banners` | `placement (first / second), title, webImageUrl, mobileImageUrl, link` — list with `?placement=`, order with `{ placement, ids }`                                                                                                                                                                                                                                                                                                                          |
-| `/api/admin/homepage/select-your-goal`  | `GET /` categories with exams; `POST /categories`, `PATCH /categories/:id { name?, isActive? }`, `PUT /categories/order`; `POST /exams`, `PUT /exams/:id`, `PATCH /exams/:id`, `PUT /exams/order { category, ids }`                                                                                                                                                                                                                                        |
+| `/api/admin/homepage/select-your-goal`  | `GET /` categories with exams; `POST /categories`, `PATCH /categories/:id { name?, isActive? }`, `PUT /categories/order`; `POST /exams`, `PUT /exams/:id`, `PATCH /exams/:id`, `PUT /exams/order { category, ids }`; exam page: `GET /exams/:id` → `{ ..., hasDetails, linkedTo, details }`, `PUT /exams/:id/details { details }` (own content), `PUT /exams/:id/link { subCategory }` (`details` points at that All Exams page)                           |
 | `/api/admin/homepage/top-rankers`       | `GET /` → `{ stats, categories (with banners) }`; boxes: `POST /stats`, `PUT /stats/:id`, `PATCH /stats/:id`, `PUT /stats/order` (`value, label, sublabel, icon`); tabs: `POST /categories`, `PATCH /categories/:id { name?, isActive? }`, `PUT /categories/order`; banners: `POST /banners`, `PUT /banners/:id`, `PATCH /banners/:id`, `PUT /banners/order { category, ids }` (`category, title, webImageUrl, mobileImageUrl, link` — at least one image) |
+| `/api/admin/homepage/footer`            | `GET /` → the 3 sections in footer order; `PUT /:key` (`company`, `freeLearningResources`, `ecosystemBrands`) `{ title, isActive, links: [{ text, link }] }` — Free Learning Resources uses `columns: [{ title, links }]` instead of `links`                                                                                                                                                                                                               |
 | `/api/admin/homepage/summary`           | `GET` — active / total counts for the Homepage screen                                                                                                                                                                                                                                                                                                                                                                                                      |
 
 ## Database collections
@@ -200,6 +209,8 @@ vini
 ├── adminMarketingBanners          1st and 2nd marketing banner (`placement`)
 ├── adminSelectYourGoalCategories  Select Your Goal tabs
 ├── adminSelectYourGoalExams       Select Your Goal exams (joined to categories by id)
+├── adminExamDetails               exam page content for All Exams and Select Your Goal (joined by exam id)
+├── adminFooterSections            footer: Company, Free Learning Resources, Our Ecosystem Brands
 ├── adminTopRankersStats           Top rankers headline boxes
 ├── adminTopRankersCategories      Top rankers tabs
 └── adminTopRankersBanners         Top rankers result banners (joined to tabs by id)

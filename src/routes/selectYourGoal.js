@@ -16,7 +16,10 @@ router.patch('/categories/:id', selectYourGoalController.updateCategory);
 
 router.post('/exams', selectYourGoalController.createExam);
 router.put('/exams/order', selectYourGoalController.reorderExams);
+router.get('/exams/:id', selectYourGoalController.getExamById);
 router.put('/exams/:id', selectYourGoalController.updateExam);
+router.put('/exams/:id/details', selectYourGoalController.updateExamDetails);
+router.put('/exams/:id/link', selectYourGoalController.linkExamDetails);
 router.patch('/exams/:id', selectYourGoalController.setExamStatus);
 
 export default router;
