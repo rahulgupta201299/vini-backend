@@ -64,14 +64,14 @@ export const getFooter = async (_req, res) => {
 
 /* ---------- admin ---------- */
 
-/** GET /api/admin/homepage/footer — the three sections, in footer order */
+/** GET /api/admin/footer — the three sections, in footer order */
 export const getFooterSections = async (_req, res) => {
   const sections = await FooterSection.find().select(SECTION_FIELDS).lean();
 
   res.json(sections.sort(byFooterOrder));
 };
 
-/** PUT /api/admin/homepage/footer/:key { title, isActive, links | columns } — saves one whole section */
+/** PUT /api/admin/footer/:key { title, isActive, links | columns } — saves one whole section */
 export const updateFooterSection = async (req, res) => {
   const { key } = req.params;
 

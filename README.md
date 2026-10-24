@@ -58,7 +58,7 @@ src/
 │   ├── admins.js                     /api/admin/admins
 │   ├── allExams.js                   /api/admin/homepage/all-exams
 │   ├── celebrationBanners.js         /api/admin/homepage/celebration-banners
-│   └── footer.js                     /api/admin/homepage/footer
+│   └── footer.js                     /api/admin/footer
 ├── middlewares/
 │   ├── auth.js                       requireAdmin, requireAccess(...roles)
 │   ├── database.js                   requireDatabase (connects before each API call)
@@ -189,8 +189,11 @@ Admin (Web Managers, Editors, Super Admins) — every list has `GET /`, `POST /`
 | `/api/admin/homepage/marketing-banners` | `placement (first / second), title, webImageUrl, mobileImageUrl, link` — list with `?placement=`, order with `{ placement, ids }`                                                                                                                                                                                                                                                                                                                          |
 | `/api/admin/homepage/select-your-goal`  | `GET /` categories with exams; `POST /categories`, `PATCH /categories/:id { name?, isActive? }`, `PUT /categories/order`; `POST /exams`, `PUT /exams/:id`, `PATCH /exams/:id`, `PUT /exams/order { category, ids }`; exam page: `GET /exams/:id` → `{ ..., hasDetails, linkedTo, details }`, `PUT /exams/:id/details { details }` (own content), `PUT /exams/:id/link { subCategory }` (`details` points at that All Exams page)                           |
 | `/api/admin/homepage/top-rankers`       | `GET /` → `{ stats, categories (with banners) }`; boxes: `POST /stats`, `PUT /stats/:id`, `PATCH /stats/:id`, `PUT /stats/order` (`value, label, sublabel, icon`); tabs: `POST /categories`, `PATCH /categories/:id { name?, isActive? }`, `PUT /categories/order`; banners: `POST /banners`, `PUT /banners/:id`, `PATCH /banners/:id`, `PUT /banners/order { category, ids }` (`category, title, webImageUrl, mobileImageUrl, link` — at least one image) |
-| `/api/admin/homepage/footer`            | `GET /` → the 3 sections in footer order; `PUT /:key` (`company`, `freeLearningResources`, `ecosystemBrands`) `{ title, isActive, links: [{ text, link }] }` — Free Learning Resources uses `columns: [{ title, links }]` instead of `links`                                                                                                                                                                                                               |
 | `/api/admin/homepage/summary`           | `GET` — active / total counts for the Homepage screen                                                                                                                                                                                                                                                                                                                                                                                                      |
+
+## Footer (Web → Footer)
+
+`/api/admin/footer` (Web Managers and Editors): `GET /` → the 3 sections in footer order; `PUT /:key` (`company`, `freeLearningResources`, `ecosystemBrands`) `{ title, isActive, links: [{ text, link }] }` — Free Learning Resources uses `columns: [{ title, links }]` instead of `links`. The website reads `GET /api/footer`.
 
 ## Database collections
 

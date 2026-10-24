@@ -44,7 +44,7 @@ router.use('/admin/homepage/free-resources', freeResources);
 router.use('/admin/homepage/marketing-banners', marketingBanners);
 router.use('/admin/homepage/select-your-goal', selectYourGoal);
 router.use('/admin/homepage/top-rankers', topRankers);
-router.use('/admin/homepage/footer', footer);
+router.use('/admin/footer', footer);
 router.use('/admin/homepage/summary', homepageSummary);
 
 export default router;
