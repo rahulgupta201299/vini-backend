@@ -2,12 +2,13 @@ import HeroBanner from '../models/HeroBanner.js';
 import {
   assertBoolean,
   assertText,
+  deleteByIdOrThrow,
   findByIdOrThrow,
   nextOrder,
   saveOrder,
 } from '../utils/ordering.js';
 
-/** Homepage → Hero slider. Slides are switched active / inactive, never deleted. */
+/** Homepage → Hero slider. Slides are switched active / inactive. Deleted for good with Delete access. */
 
 /** The fields an admin may set, checked. Anything else in the body is ignored. */
 const pickBannerFields = ({
@@ -70,4 +71,11 @@ export const reorderHeroBanners = async (req, res) => {
   await saveOrder(HeroBanner, ids);
 
   res.json(await getAllBanners());
+};
+
+/** DELETE /api/admin/homepage/hero-banners/:id — removes it for good (needs Delete access) */
+export const deleteHeroBanner = async (req, res) => {
+  const { _id } = await deleteByIdOrThrow(HeroBanner, req.params.id, 'Hero banner');
+
+  res.json({ deleted: true, _id });
 };

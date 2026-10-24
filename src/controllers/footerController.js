@@ -3,8 +3,9 @@ import ApiError from '../utils/ApiError.js';
 import { assertBoolean, assertText } from '../utils/ordering.js';
 
 /**
- * Footer → Company, Free Learning Resources and Our Ecosystem Brands (one document each).
- * The three sections always exist; they are edited and switched on / off, never added or deleted.
+ * Footer → Company, Free Learning Resources and Our Ecosystem Brands (one document each, by `key`).
+ * Edited and switched on / off; with Delete access a section is deleted for good (the website then leaves it out),
+ * and saving it again creates it anew.
  */
 
 const SECTION_FIELDS = 'key title isActive links columns updatedAt';
@@ -71,19 +72,31 @@ export const getFooterSections = async (_req, res) => {
   res.json(sections.sort(byFooterOrder));
 };
 
-/** PUT /api/admin/footer/:key { title, isActive, links | columns } — saves one whole section */
+/** PUT /api/admin/footer/:key { title, isActive, links | columns } — saves one whole section (creates a deleted one again) */
 export const updateFooterSection = async (req, res) => {
   const { key } = req.params;
 
   assertSectionKey(key);
 
   const fields = pickSectionFields(key, req.body || {});
-  const section = await FooterSection.findOne({ key });
-
-  if (!section) throw new ApiError(404, 'Footer section not found.');
+  const savedSection = await FooterSection.findOne({ key });
+  const section = savedSection || new FooterSection({ key });
 
   section.set(fields);
   await section.save();
 
   res.json(section.toObject());
+};
+
+/** DELETE /api/admin/footer/:key — deletes a section for good (needs Delete access); the website leaves it out */
+export const deleteFooterSection = async (req, res) => {
+  const { key } = req.params;
+
+  assertSectionKey(key);
+
+  const section = await FooterSection.findOneAndDelete({ key });
+
+  if (!section) throw new ApiError(404, 'Footer section not found.');
+
+  res.json({ deleted: true, key });
 };

@@ -1,6 +1,7 @@
 import AllExamsCategory from '../models/AllExamsCategory.js';
 import AllExamsSubCategory from '../models/AllExamsSubCategory.js';
 import GoalCategory from '../models/GoalCategory.js';
+import ExamDetails from '../models/ExamDetails.js';
 import GoalExam from '../models/GoalExam.js';
 import ApiError from '../utils/ApiError.js';
 import {
@@ -11,16 +12,19 @@ import {
 } from '../utils/examDetails.js';
 import {
   assertBoolean,
+  assertNoItems,
   assertText,
   findByIdOrThrow,
   nextOrder,
+  plural,
   saveOrder,
 } from '../utils/ordering.js';
 import slugify from '../utils/slugify.js';
 
 /**
  * Homepage → "Select Your Goal": category tabs (e.g. "UPSC") with their exam cards (e.g. "UPSC CSE").
- * Categories and exams are switched active / inactive and reordered — never deleted.
+ * Categories and exams are switched active / inactive and reordered, or deleted for good with Delete access
+ * (a category only once it has no exams).
  * An exam's page content (/goal/<slug>) lives in adminExamDetails; its `details` holds that document's id —
  * either its own content, or linked to an All Exams sub category's page (the same document, so it stays in sync).
  * Exams without details get an auto-generated page on the website.
@@ -313,4 +317,31 @@ export const linkExamDetails = async (req, res) => {
   await exam.save();
 
   res.json(await getAdminExam(exam._id));
+};
+
+/** DELETE /api/admin/homepage/select-your-goal/categories/:id — removes a category for good, once it has no exams */
+export const deleteCategory = async (req, res) => {
+  const category = await findByIdOrThrow(GoalCategory, req.params.id, 'Category');
+
+  await assertNoItems(
+    GoalExam,
+    { category: category._id },
+    (count) => `Delete or move its ${plural(count, 'exam')} first.`,
+  );
+  await category.deleteOne();
+
+  res.json({ deleted: true, _id: category._id });
+};
+
+/**
+ * DELETE /api/admin/homepage/select-your-goal/exams/:id — removes an exam for good, with its own page content.
+ * A linked All Exams page isn't touched.
+ */
+export const deleteExam = async (req, res) => {
+  const exam = await findByIdOrThrow(GoalExam, req.params.id, 'Exam');
+
+  await ExamDetails.deleteOne({ exam: exam._id, source: 'selectYourGoal' });
+  await exam.deleteOne();
+
+  res.json({ deleted: true, _id: exam._id });
 };

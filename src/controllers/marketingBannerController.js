@@ -3,6 +3,7 @@ import ApiError from '../utils/ApiError.js';
 import {
   assertBoolean,
   assertText,
+  deleteByIdOrThrow,
   findByIdOrThrow,
   nextOrder,
   saveOrder,
@@ -10,7 +11,7 @@ import {
 
 /**
  * Homepage → 1st and 2nd marketing banner (`placement`: first / second).
- * Banners are switched active / inactive, never deleted.
+ * Banners are switched active / inactive. Deleted for good with Delete access.
  */
 
 const assertPlacement = (placement) => {
@@ -93,4 +94,11 @@ export const reorderMarketingBanners = async (req, res) => {
   await saveOrder(MarketingBanner, ids, { placement });
 
   res.json(await getBannersIn(placement));
+};
+
+/** DELETE /api/admin/homepage/marketing-banners/:id — removes it for good (needs Delete access) */
+export const deleteMarketingBanner = async (req, res) => {
+  const { _id } = await deleteByIdOrThrow(MarketingBanner, req.params.id, 'Marketing banner');
+
+  res.json({ deleted: true, _id });
 };

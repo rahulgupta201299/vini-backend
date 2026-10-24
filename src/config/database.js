@@ -1,5 +1,7 @@
 import mongoose from 'mongoose';
 
+import { ensureAccessCatalogue } from '../utils/accessCatalogue.js';
+
 import { dbName, missingEnv, mongoUri } from './env.js';
 
 const CONNECTED = 1;
@@ -26,9 +28,11 @@ const connectDB = async () => {
 
   connectionPromise = mongoose
     .connect(mongoUri, { dbName, serverSelectionTimeoutMS: 10_000 })
-    .then(({ connection }) => {
+    .then(async ({ connection }) => {
       lastError = null;
       console.log(`MongoDB connected: ${connection.host}/${connection.name}`);
+      // Roles and permissions every admin account points to (insert-only)
+      await ensureAccessCatalogue();
 
       return connection;
     })

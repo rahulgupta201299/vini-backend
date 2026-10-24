@@ -17,6 +17,8 @@ const allExamsSubCategorySchema = new Schema(
     // Page address (/goal/<slug>), made from the name
     slug: { type: String, required: true, unique: true },
     isActive: { type: Boolean, default: true },
+    // Optional: where the header menu item goes (a page or URL). Empty → the exam's page /goal/<slug>
+    link: { type: String, trim: true, default: '' },
     order: { type: Number, default: 0 },
     // Icon in the header "All Exams" menu (a lucide icon name and colours)
     menuIcon: {

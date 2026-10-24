@@ -4,16 +4,19 @@ import TopRankersStat from '../models/TopRankersStat.js';
 import ApiError from '../utils/ApiError.js';
 import {
   assertBoolean,
+  assertNoItems,
   assertText,
+  deleteByIdOrThrow,
   findByIdOrThrow,
   nextOrder,
+  plural,
   saveOrder,
 } from '../utils/ordering.js';
 import slugify from '../utils/slugify.js';
 
 /**
  * "Our Top Rankers" (homepage and course pages): headline boxes, plus result banners in tabs
- * (UPSC, State PCS, Other Exams). Everything is switched active / inactive and reordered — never deleted.
+ * (UPSC, State PCS, Other Exams). Everything is switched active / inactive and reordered, or deleted for good with Delete access (a tab only once it has no banners).
  */
 
 const BY_ORDER = { order: 1, createdAt: 1 };
@@ -283,4 +286,32 @@ export const reorderBanners = async (req, res) => {
   await saveOrder(TopRankersBanner, ids, { category });
 
   res.json(await getAdminData());
+};
+
+/** DELETE /api/admin/homepage/top-rankers/stats/:id — removes a headline box for good */
+export const deleteStat = async (req, res) => {
+  const { _id } = await deleteByIdOrThrow(TopRankersStat, req.params.id, 'Box');
+
+  res.json({ deleted: true, _id });
+};
+
+/** DELETE /api/admin/homepage/top-rankers/categories/:id — removes a tab for good, once it has no banners */
+export const deleteCategory = async (req, res) => {
+  const category = await findByIdOrThrow(TopRankersCategory, req.params.id, 'Tab');
+
+  await assertNoItems(
+    TopRankersBanner,
+    { category: category._id },
+    (count) => `Delete or move its ${plural(count, 'banner')} first.`,
+  );
+  await category.deleteOne();
+
+  res.json({ deleted: true, _id: category._id });
+};
+
+/** DELETE /api/admin/homepage/top-rankers/banners/:id — removes a result banner for good */
+export const deleteBanner = async (req, res) => {
+  const { _id } = await deleteByIdOrThrow(TopRankersBanner, req.params.id, 'Banner');
+
+  res.json({ deleted: true, _id });
 };

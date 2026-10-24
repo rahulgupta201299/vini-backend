@@ -4,7 +4,13 @@
  * Naming: camelCase, starting with the area that owns the data ("admin" for everything the admin
  * panel manages), then what it holds — no page names, so a section can move without a rename.
  *
- *   adminLogin                     admin accounts
+ *   adminUsers                     admin accounts: type (superAdmin / admin / member) and `rolePermissionIds`
+ *                                  → adminRolePermission (Super Admins have none — they can do everything)
+ *   adminRoles                     workspaces: { role: 'web' }, { role: 'app' }, { role: 'store' }
+ *   adminPermissions               access catalogue: { section, level, canDelete }, unique, workspace-neutral
+ *                                  (e.g. one "dashboard" for every workspace)
+ *   adminRolePermission            one workspace's access: { roleId → adminRoles, permissionIds → adminPermissions },
+ *                                  one shared document per unique combination
  *   adminOtps                      pending email codes (deleted automatically when expired)
  *   adminAllExamsCategories        All Exams categories
  *   adminAllExamsSubCategories     All Exams sub categories (joined to categories by `category` id)
@@ -24,7 +30,10 @@
  * New sections follow the same pattern, e.g. "adminImpactStats".
  */
 export const COLLECTIONS = {
-  adminLogin: 'adminLogin',
+  adminUsers: 'adminUsers',
+  adminRoles: 'adminRoles',
+  adminPermissions: 'adminPermissions',
+  adminRolePermission: 'adminRolePermission',
   adminOtps: 'adminOtps',
   adminAllExamsCategories: 'adminAllExamsCategories',
   adminAllExamsSubCategories: 'adminAllExamsSubCategories',

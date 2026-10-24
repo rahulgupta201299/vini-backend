@@ -1,14 +1,15 @@
 import { Router } from 'express';
 
 import * as footerController from '../controllers/footerController.js';
-import { requireAccess, requireAdmin } from '../middlewares/auth.js';
+import { requireAdmin, requireSection } from '../middlewares/auth.js';
 
-/** Admin: Footer sections, mounted at /api/admin/footer. Web Managers and Editors. */
+/** Admin: Footer sections, mounted at /api/admin/footer. Needs Footer access (view / edit / delete). */
 const router = Router();
 
-router.use(requireAdmin, requireAccess('webManager', 'editor'));
+router.use(requireAdmin, requireSection('footer'));
 
 router.get('/', footerController.getFooterSections);
 router.put('/:key', footerController.updateFooterSection);
+router.delete('/:key', footerController.deleteFooterSection);
 
 export default router;

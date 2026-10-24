@@ -1,5 +1,7 @@
 import AllExamsCategory from '../models/AllExamsCategory.js';
 import AllExamsSubCategory from '../models/AllExamsSubCategory.js';
+import ExamDetails from '../models/ExamDetails.js';
+import GoalExam from '../models/GoalExam.js';
 import ApiError from '../utils/ApiError.js';
 import {
   buildExamDetails,
@@ -7,12 +9,13 @@ import {
   toDetails,
   toObjectIdOrThrow,
 } from '../utils/examDetails.js';
-import { nextOrder, saveOrder } from '../utils/ordering.js';
+import { assertNoItems, findByIdOrThrow, nextOrder, plural, saveOrder } from '../utils/ordering.js';
 import slugify from '../utils/slugify.js';
 
 /**
  * Homepage → All Exams: categories (e.g. "Only IAS") and their sub categories (e.g. "UPSC CSE 2026/27"),
- * each with its own page at /goal/<slug>. Nothing is deleted — items are switched active / inactive.
+ * each with its own page at /goal/<slug>. Items are switched active / inactive, or deleted for good with Delete
+ * access (a category only once it has no sub categories).
  * A sub category's page content lives in adminExamDetails; its `details` holds that document's id.
  */
 
@@ -72,7 +75,7 @@ const getCategoriesWithSubCategories = ({ activeOnly = false, subCategoryFields 
 /** Every category (active and inactive) with its sub categories, without their page details. */
 const getAdminList = () =>
   getCategoriesWithSubCategories({
-    subCategoryFields: { name: 1, slug: 1, isActive: 1, menuIcon: 1, updatedAt: 1 },
+    subCategoryFields: { name: 1, slug: 1, isActive: 1, link: 1, menuIcon: 1, updatedAt: 1 },
   });
 
 const assertCategoryNameIsFree = async (name, exceptId) => {
@@ -92,10 +95,17 @@ const pickSubCategoryFields = ({
   category,
   name = '',
   isActive = true,
+  link = '',
   menuIcon = {},
   details = {},
 }) => {
-  const fields = { category, name: String(name).trim(), isActive, menuIcon };
+  const fields = {
+    category,
+    name: String(name).trim(),
+    isActive,
+    link: String(link).trim(),
+    menuIcon,
+  };
 
   return { fields, details };
 };
@@ -158,7 +168,7 @@ const saveSubCategory = async (subCategory, details) => {
 export const getExamMenu = async (_req, res) => {
   const categories = await getCategoriesWithSubCategories({
     activeOnly: true,
-    subCategoryFields: { _id: 0, subCategory: '$name', slug: 1, menuIcon: 1 },
+    subCategoryFields: { _id: 0, subCategory: '$name', slug: 1, link: 1, menuIcon: 1 },
   });
 
   const menu = categories
@@ -296,4 +306,44 @@ export const setSubCategoryStatus = async (req, res) => {
   await subCategory.save();
 
   res.json(await getSubCategoryWithCategory(subCategory._id));
+};
+
+/** DELETE /api/admin/homepage/all-exams/categories/:id — removes a category for good, once it has no sub categories */
+export const deleteCategory = async (req, res) => {
+  const category = await findByIdOrThrow(AllExamsCategory, req.params.id, 'Category');
+
+  await assertNoItems(
+    AllExamsSubCategory,
+    { category: category._id },
+    (count) => `Delete or move its ${plural(count, 'sub category', 'sub categories')} first.`,
+  );
+  await category.deleteOne();
+
+  res.json({ deleted: true, _id: category._id });
+};
+
+/**
+ * DELETE /api/admin/homepage/all-exams/sub-categories/:id — removes a sub category and its page for good.
+ * Blocked while Select Your Goal exams are linked to its page.
+ */
+export const deleteSubCategory = async (req, res) => {
+  const subCategory = await findByIdOrThrow(AllExamsSubCategory, req.params.id, 'Sub category');
+  const { _id, details } = subCategory;
+
+  if (details) {
+    const linkedExams = await GoalExam.find({ details }).select('name').lean();
+    const names = linkedExams.map(({ name }) => name).join(', ');
+
+    if (linkedExams.length) {
+      throw new ApiError(
+        409,
+        `Its page is linked from Select Your Goal (${names}). Unlink ${linkedExams.length === 1 ? 'it' : 'them'} first.`,
+      );
+    }
+  }
+
+  await ExamDetails.deleteOne({ exam: _id, source: 'allExams' });
+  await subCategory.deleteOne();
+
+  res.json({ deleted: true, _id });
 };

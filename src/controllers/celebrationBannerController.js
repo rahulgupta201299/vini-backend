@@ -1,11 +1,12 @@
 import CelebrationBanner from '../models/CelebrationBanner.js';
 import ApiError from '../utils/ApiError.js';
 import { countdownText, toDate } from '../utils/dates.js';
+import { deleteByIdOrThrow } from '../utils/ordering.js';
 
 /**
  * Homepage → Celebration banner: a festival sale banner under the hero slider (e.g. "Happy Diwali").
  * The website shows it only while it is active AND between `startsAt` and `endsAt`.
- * Banners are never deleted — they are switched off, and switch off by themselves after `endsAt`.
+ * Banners are switched off (and switch off by themselves after `endsAt`), or deleted for good with Delete access.
  */
 
 const WEBSITE_FIELDS = 'title subtitle imageUrl alt theme offers startsAt endsAt';
@@ -153,4 +154,11 @@ export const setBannerStatus = async (req, res) => {
   await banner.save();
 
   res.json(banner.toObject());
+};
+
+/** DELETE /api/admin/homepage/celebration-banners/:id — removes the banner for good (needs Delete access) */
+export const deleteBanner = async (req, res) => {
+  const { _id } = await deleteByIdOrThrow(CelebrationBanner, req.params.id, 'Banner');
+
+  res.json({ deleted: true, _id });
 };

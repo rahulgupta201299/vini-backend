@@ -2,12 +2,13 @@ import FreeResource from '../models/FreeResource.js';
 import {
   assertBoolean,
   assertText,
+  deleteByIdOrThrow,
   findByIdOrThrow,
   nextOrder,
   saveOrder,
 } from '../utils/ordering.js';
 
-/** Homepage → "Browse Our Free Resources" tiles. Switched active / inactive, never deleted. */
+/** Homepage → "Browse Our Free Resources" tiles. Switched active / inactive. Deleted for good with Delete access. */
 
 /** The fields an admin may set, checked. Anything else in the body is ignored. */
 const pickResourceFields = ({
@@ -76,4 +77,11 @@ export const reorderFreeResources = async (req, res) => {
   await saveOrder(FreeResource, ids);
 
   res.json(await getAllResources());
+};
+
+/** DELETE /api/admin/homepage/free-resources/:id — removes it for good (needs Delete access) */
+export const deleteFreeResource = async (req, res) => {
+  const { _id } = await deleteByIdOrThrow(FreeResource, req.params.id, 'Free resource');
+
+  res.json({ deleted: true, _id });
 };

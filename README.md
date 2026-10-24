@@ -28,7 +28,7 @@ src/
 │   ├── env.js                        every environment variable, read once
 │   ├── database.js                   connectDB() — one shared MongoDB connection
 │   ├── collections.js                every collection name
-│   ├── roles.js                      admin roles (RBAC) + hasAccess()
+│   ├── permissions.js                roles, sections, presets + can() (RBAC)
 │   └── constants.js                  cookie names, token types
 ├── controllers/                      request → checks → database → JSON (the business logic lives here)
 │   ├── healthController.js           GET /api/health
@@ -37,7 +37,10 @@ src/
 │   ├── allExamsController.js         All Exams: website menu + pages, admin categories / sub categories
 │   └── celebrationBannerController.js  festival banner: website + admin
 ├── models/                           Mongoose schemas, one per collection
-│   ├── Admin.js                      `adminLogin`
+│   ├── Admin.js                      `adminUsers` (rolePermissionIds → adminRolePermission)
+│   ├── AdminRole.js                  `adminRoles`
+│   ├── AdminPermission.js            `adminPermissions`
+│   ├── AdminRolePermission.js        `adminRolePermission` (roleId → adminRoles, permissionIds → adminPermissions)
 │   ├── AdminOtp.js                   `adminOtps` (one per admin, auto-deleted)
 │   ├── AllExamsCategory.js           `adminAllExamsCategories`
 │   ├── AllExamsSubCategory.js        `adminAllExamsSubCategories`
@@ -88,46 +91,64 @@ src/
 
 ## Admin accounts API (`/api/admin/admins`)
 
-Admin name, email and password live only in MongoDB (`adminLogin`, password hashed) and are managed through these APIs — never through env variables.
+Admin name, email and password live only in MongoDB (`adminUsers`, password hashed) and are managed through these APIs — never through env variables.
 Send `Authorization: Bearer <token>` from `/api/admin/auth/login`.
 
-### Roles (RBAC)
+### Roles and permissions (RBAC)
 
-An admin has one or more `roles` (`src/config/roles.js`). They only see — and can only call — the sections their roles open.
+Every admin has a `role` and, unless Super Admin, a permission per section (`src/config/permissions.js`):
 
-| Role key       | Label         | Opens                             |
-| -------------- | ------------- | --------------------------------- |
-| `superAdmin`   | Super Admin   | everything, including admin users |
-| `webManager`   | Web Manager   | Web: dashboard and homepage       |
-| `appManager`   | App Manager   | App workspace                     |
-| `seoManager`   | SEO Manager   | Web: SEO                          |
-| `salesManager` | Sales Manager | Web: sales and leads              |
-| `editor`       | Editor        | Web: homepage content (All Exams) |
-| `hrManager`    | HR Manager    | Web: HR and careers               |
-| `storeManager` | Store Manager | Store workspace                   |
+| Role         | Can do                                                                                           |
+| ------------ | ------------------------------------------------------------------------------------------------ |
+| `superAdmin` | everything; manages every user; the only one who gives Delete access                             |
+| `admin`      | its own sections; manages Members (up to its own access, never Delete) — not Super Admins/Admins |
+| `member`     | its own sections                                                                                 |
 
-`superAdmin` already opens everything, so it is stored on its own (`['superAdmin']`).
+`permissions.<section> = { level: 'none' | 'view' | 'edit', canDelete }` for the sections `webDashboard`, `homepage`, `allExams`,
+`footer`, `seo`, `sales`, `hr`, `app`, `store`. Routes use `requireSection('<section>')`: GET needs view, DELETE needs
+`canDelete` (with edit), anything else needs edit. The web dashboard has nothing to delete.
+Presets (the old fixed roles: Web Manager, Editor, SEO / Sales / HR / App / Store Manager) only fill the grid with Edit.
+Stored normalised in four collections:
 
-| Method | Path           | Who                                    | Body                                              |
-| ------ | -------------- | -------------------------------------- | ------------------------------------------------- |
-| POST   | `/setup`       | anyone, **only while no admin exists** | `{ name, email, password }` → first Super Admin   |
-| PATCH  | `/me/password` | any signed-in admin                    | `{ currentPassword, newPassword }`                |
-| GET    | `/roles`       | Super Admin                            | — `[{ key, label, access }]`                      |
-| GET    | `/`            | Super Admin                            | — list admins                                     |
-| POST   | `/`            | Super Admin                            | `{ name, email, password, roles }`                |
-| GET    | `/:id`         | Super Admin                            | —                                                 |
-| PATCH  | `/:id`         | Super Admin                            | `{ name?, email?, password?, roles?, isActive? }` |
+- `adminUsers`: `type` (`superAdmin` / `admin` / `member`) and `rolePermissionIds` → `adminRolePermission`. Super Admins have
+  none — they can do everything.
+- `adminRoles`: the workspaces `{ role: 'web' | 'app' | 'store' }`.
+- `adminPermissions`: `{ section, level, canDelete }`, unique and workspace-neutral — e.g. one `dashboard` serves the Web, App and
+  Store dashboards (`SECTIONS[*].permission` in `src/config/permissions.js` maps admin sections to these).
+- `adminRolePermission`: `{ roleId, permissionIds }` — one workspace and the permissions granted there. One shared document per
+  unique combination: a user gets one per workspace it works in, and users with the same access point to the same document.
 
-There is no delete — switch an admin off with `isActive: false`.
-Rules: passwords are at least 8 characters; at least one role; you can't deactivate yourself; there is always at least one active Super Admin;
-a new password signs that admin out everywhere; role and active-status changes apply on their next request.
+Everything is joined in (populated) whenever an account is loaded. Roles and permissions are created from
+`src/config/permissions.js` when the server connects (insert-only). The API answers with `role` (the type), `workspaces` and a
+`permissions` object per admin section.
+
+| Method | Path              | Who                                    | Body                                                           |
+| ------ | ----------------- | -------------------------------------- | -------------------------------------------------------------- |
+| POST   | `/setup`          | anyone, **only while no admin exists** | `{ name, email, password }` → first Super Admin                |
+| PATCH  | `/me/password`    | any signed-in admin                    | `{ currentPassword, newPassword }`                             |
+| GET    | `/access-options` | Super Admin, Admin                     | — `{ roles, sections, presets, levels }`                       |
+| GET    | `/`               | Super Admin, Admin                     | — list users                                                   |
+| POST   | `/`               | Super Admin, Admin (Members only)      | `{ name, email, password, role, permissions }`                 |
+| GET    | `/:id`            | Super Admin, Admin                     | —                                                              |
+| PATCH  | `/:id`            | Super Admin, Admin (Members only)      | `{ name?, email?, password?, role?, permissions?, isActive? }` |
+
+Users aren't deleted — switch them off with `isActive: false`.
+Rules: passwords are at least 8 characters; you can't deactivate yourself; there is always at least one active Super Admin;
+a new password signs that admin out everywhere; role and permission changes apply on their next request.
+
+### Deleting
+
+With Delete access, items are removed for good with `DELETE` on their URL (hero / marketing / celebration banners, free
+resources, Select Your Goal categories and exams, top rankers boxes / tabs / banners, All Exams categories and sub categories).
+A category or tab is refused (409) until it is empty; an All Exams sub category is refused while Select Your Goal exams link to
+its page. Deleting an exam also deletes its own page in `adminExamDetails`.
 
 ## All Exams (Homepage → All Exams)
 
 Two collections, joined by the category id (MongoDB `$lookup` / `populate`):
 
 - `adminAllExamsCategories` — `{ name, isActive, order }`
-- `adminAllExamsSubCategories` — `{ category: <category id>, name, slug, isActive, order, menuIcon: { name, color, background }, details: <adminExamDetails id> }`
+- `adminAllExamsSubCategories` — `{ category: <category id>, name, slug, isActive, order, link, menuIcon: { name, color, background }, details: <adminExamDetails id> }` — `link` is optional: where the header menu item goes (empty → `/goal/<slug>`)
 - `adminExamDetails` — `{ exam: <sub category or goal exam id>, source: allExams | selectYourGoal, subTitle, banners, freeClasses, batches, topRankers, aboutExam, faqs }` — an exam's page. The exam's `details` holds this document's id (Select Your Goal exams: `null` until the page is saved); `exam` points back.
 
 **One-off after deploying:** `npm run db:link-exam-details -- --dry-run`, then `npm run db:link-exam-details`. It backs up the old embedded `details` to `backups/`, refreshes any page edited on the old admin, and sets every exam's `details` to its adminExamDetails id. Safe to re-run.
@@ -193,7 +214,7 @@ Admin (Web Managers, Editors, Super Admins) — every list has `GET /`, `POST /`
 
 ## Footer (Web → Footer)
 
-`/api/admin/footer` (Web Managers and Editors): `GET /` → the 3 sections in footer order; `PUT /:key` (`company`, `freeLearningResources`, `ecosystemBrands`) `{ title, isActive, links: [{ text, link }] }` — Free Learning Resources uses `columns: [{ title, links }]` instead of `links`. The website reads `GET /api/footer`.
+`/api/admin/footer` (Footer access — view / edit / delete): `GET /` → the 3 sections in footer order; `DELETE /:key` deletes a section (Delete access; saving it again recreates it); `PUT /:key` (`company`, `freeLearningResources`, `ecosystemBrands`) `{ title, isActive, links: [{ text, link }] }` — Free Learning Resources uses `columns: [{ title, links }]` instead of `links`. The website reads `GET /api/footer`.
 
 ## Database collections
 
@@ -202,7 +223,10 @@ admin panel manages) — see `src/config/collections.js`.
 
 ```
 vini
-├── adminLogin                     admin accounts
+├── adminUsers                     admin accounts: type, rolePermissionIds → adminRolePermission (none for Super Admins)
+├── adminRoles                     workspaces: { role: web | app | store }
+├── adminPermissions               access catalogue: { section, level, canDelete }, unique and workspace-neutral
+├── adminRolePermission            { roleId → adminRoles, permissionIds → adminPermissions }, shared per unique combination
 ├── adminOtps                      pending email codes (deleted automatically when expired)
 ├── adminAllExamsCategories        All Exams categories
 ├── adminAllExamsSubCategories     All Exams sub categories (joined to categories by id)

@@ -52,3 +52,23 @@ export const assertText = (value, label) => {
 
   if (!isValid) throw new ApiError(400, `${label} is required.`);
 };
+
+/** Deletes a document for good (404 when it doesn't exist) and returns it. */
+export const deleteByIdOrThrow = async (Model, id, label) => {
+  const doc = await findByIdOrThrow(Model, id, label);
+
+  await doc.deleteOne();
+
+  return doc;
+};
+
+/** Responds 409 while `Model` still has documents matching `filter` — e.g. a category that isn't empty yet. */
+export const assertNoItems = async (Model, filter, message) => {
+  const count = await Model.countDocuments(filter);
+
+  if (count) throw new ApiError(409, message(count));
+};
+
+/** "1 banner" / "3 banners" ("1 sub category" / "2 sub categories" with the plural given) */
+export const plural = (count, word, pluralWord = `${word}s`) =>
+  `${count} ${count === 1 ? word : pluralWord}`;
