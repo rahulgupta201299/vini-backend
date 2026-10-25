@@ -6,6 +6,19 @@ import { dbName, missingEnv, mongoUri } from './env.js';
 
 const CONNECTED = 1;
 
+/**
+ * Connection pool settings. On Vercel every running function instance keeps its own pool, so the default
+ * (up to 100 connections each) quickly fills the Atlas free tier's 500-connection limit. A small pool per
+ * instance, and closing connections that sit idle, keeps the total low.
+ */
+const CONNECTION_OPTIONS = {
+  dbName,
+  serverSelectionTimeoutMS: 10_000,
+  maxPoolSize: 5, // most connections one instance may open (default 100)
+  minPoolSize: 0, // keep no idle connections open
+  maxIdleTimeMS: 10_000, // close a connection after 10 s unused
+};
+
 let connectionPromise = null;
 let lastError = null;
 
@@ -27,7 +40,7 @@ const connectDB = async () => {
   if (connectionPromise) return connectionPromise;
 
   connectionPromise = mongoose
-    .connect(mongoUri, { dbName, serverSelectionTimeoutMS: 10_000 })
+    .connect(mongoUri, CONNECTION_OPTIONS)
     .then(async ({ connection }) => {
       lastError = null;
       console.log(`MongoDB connected: ${connection.host}/${connection.name}`);
