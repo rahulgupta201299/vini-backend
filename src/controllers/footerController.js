@@ -1,9 +1,14 @@
-import FooterSection, { FOOTER_SECTIONS, SECTIONS_WITH_COLUMNS } from '../models/FooterSection.js';
+import FooterSection, {
+  COLUMN_STYLES,
+  FOOTER_SECTIONS,
+  SECTIONS_WITH_COLUMNS,
+} from '../models/FooterSection.js';
 import ApiError from '../utils/ApiError.js';
 import { assertBoolean, assertText } from '../utils/ordering.js';
 
 /**
- * Footer → Company, Free Learning Resources and Our Ecosystem Brands (one document each, by `key`).
+ * Footer sections (one document each, by `key`): the columns next to the logo (company), Free Learning Resources
+ * and Our Ecosystem Brands.
  * Edited and switched on / off; with Delete access a section is deleted for good (the website then leaves it out),
  * and saving it again creates it anew.
  */
@@ -26,10 +31,13 @@ const pickSectionFields = (key, { title = '', isActive = true, links = [], colum
   const hasColumns = SECTIONS_WITH_COLUMNS.includes(key);
 
   if (hasColumns) {
-    const cleanColumns = columns.map(({ title: columnTitle = '', links: columnLinks = [] }) => ({
-      title: columnTitle,
-      links: toLinks(columnLinks),
-    }));
+    const cleanColumns = columns.map(
+      ({ title: columnTitle = '', style = 'links', links: columnLinks = [] }) => ({
+        title: columnTitle,
+        style: COLUMN_STYLES.includes(style) ? style : 'links',
+        links: toLinks(columnLinks),
+      }),
+    );
 
     return { title: title.trim(), isActive, columns: cleanColumns, links: [] };
   }
@@ -40,11 +48,12 @@ const pickSectionFields = (key, { title = '', isActive = true, links = [], colum
 /* ---------- public (website) ---------- */
 
 /**
- * GET /api/footer — { company, freeLearningResources, ecosystemBrands }; a switched-off section is null.
- * company / ecosystemBrands: { title, links: [{ text, link }] }; freeLearningResources: { title, columns }.
+ * GET /api/footer — { company, freeLearningResources, ecosystemBrands }; a switched-off or deleted section is null.
+ * company / freeLearningResources: { title, columns: [{ title, style, links: [{ text, link }] }] };
+ * ecosystemBrands: { title, links }.
  */
 export const getFooter = async (_req, res) => {
-  const sections = await FooterSection.find({ isActive: true })
+  const sections = await FooterSection.find({ isActive: true, key: { $in: FOOTER_SECTIONS } })
     .select('-_id key title links columns')
     .lean();
 
@@ -65,9 +74,11 @@ export const getFooter = async (_req, res) => {
 
 /* ---------- admin ---------- */
 
-/** GET /api/admin/footer — the three sections, in footer order */
+/** GET /api/admin/footer — every saved section, in footer order */
 export const getFooterSections = async (_req, res) => {
-  const sections = await FooterSection.find().select(SECTION_FIELDS).lean();
+  const sections = await FooterSection.find({ key: { $in: FOOTER_SECTIONS } })
+    .select(SECTION_FIELDS)
+    .lean();
 
   res.json(sections.sort(byFooterOrder));
 };

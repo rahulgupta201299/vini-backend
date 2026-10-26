@@ -214,7 +214,7 @@ Admin (Web Managers, Editors, Super Admins) — every list has `GET /`, `POST /`
 
 ## Footer (Web → Footer)
 
-`/api/admin/footer` (Footer access — view / edit / delete): `GET /` → the 3 sections in footer order; `DELETE /:key` deletes a section (Delete access; saving it again recreates it); `PUT /:key` (`company`, `freeLearningResources`, `ecosystemBrands`) `{ title, isActive, links: [{ text, link }] }` — Free Learning Resources uses `columns: [{ title, links }]` instead of `links`. The website reads `GET /api/footer`.
+`/api/admin/footer` (Footer access — view / edit / delete): `GET /` → the saved sections in footer order; `DELETE /:key` deletes a section (Delete access; saving it again recreates it); `PUT /:key` (`company` — the columns next to the logo — `freeLearningResources`, `ecosystemBrands`). `company` and `freeLearningResources` take `{ title, isActive, columns: [{ title, style?, links: [{ text, link }] }] }` (`style` for company columns: `links`, `locations` with a pin, or `contact` — mailto: / tel: / wa.me links become email / Call / WhatsApp); `ecosystemBrands` takes `{ title, isActive, links }`. The website reads `GET /api/footer`.
 
 ## Database collections
 
@@ -237,7 +237,7 @@ vini
 ├── adminSelectYourGoalCategories  Select Your Goal tabs
 ├── adminSelectYourGoalExams       Select Your Goal exams (joined to categories by id)
 ├── adminExamDetails               exam page content for All Exams and Select Your Goal (joined by exam id)
-├── adminFooterSections            footer: Company, Free Learning Resources, Our Ecosystem Brands
+├── adminFooterSections            footer: Company footer (columns next to the logo), Free Learning Resources, Our Ecosystem Brands
 ├── adminTopRankersStats           Top rankers headline boxes
 ├── adminTopRankersCategories      Top rankers tabs
 └── adminTopRankersBanners         Top rankers result banners (joined to tabs by id)

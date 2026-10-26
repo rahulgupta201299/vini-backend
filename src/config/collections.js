@@ -16,7 +16,7 @@
  *   adminAllExamsSubCategories     All Exams sub categories (joined to categories by `category` id)
  *   adminExamDetails               exam page content (banners, classes, batches, about, FAQs), joined to
  *                                  All Exams sub categories / Select Your Goal exams by `exam` id
- *   adminFooterSections            footer: Company, Free Learning Resources, Our Ecosystem Brands
+ *   adminFooterSections            footer: Company footer (columns next to the logo), Free Learning Resources, Our Ecosystem Brands
  *   adminCelebrationBanners        festival offer banner (with start / end dates)
  *   adminHeroBanners               hero slider
  *   adminFreeResources             "Browse Our Free Resources" tiles
