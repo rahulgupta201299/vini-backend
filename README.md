@@ -214,7 +214,7 @@ Admin (Web Managers, Editors, Super Admins) — every list has `GET /`, `POST /`
 
 ## Footer (Web → Footer)
 
-`/api/admin/footer` (Footer access — view / edit / delete): `GET /` → the saved sections in footer order; `DELETE /:key` deletes a section (Delete access; saving it again recreates it); `PUT /:key` (`company` — the columns next to the logo — `freeLearningResources`, `ecosystemBrands`). `company` and `freeLearningResources` take `{ title, isActive, columns: [{ title, style?, links: [{ text, link }] }] }` (`style` for company columns: `links`, `locations` with a pin, or `contact` — mailto: / tel: / wa.me links become email / Call / WhatsApp); `ecosystemBrands` takes `{ title, isActive, links }`. The website reads `GET /api/footer`.
+`/api/admin/footer` (Footer access — view / edit / delete): `GET /` → the saved sections in footer order; `DELETE /:key` deletes a section (Delete access; saving it again recreates it); `PUT /:key` (`company` — the columns next to the logo — `freeLearningResources`, `ecosystemBrands`). `company` and `freeLearningResources` take `{ title, isActive, columns: [{ title, style?, links: [{ text, link }] }] }` (`style` for company columns: `links`, `locations` with a pin, or `contact` — mailto: / tel: / wa.me links become email / Call / WhatsApp); `ecosystemBrands` takes `{ title, isActive, links }`. Links may have an optional `badge` (a small animated tag beside it, e.g. "We are hiring"). The website reads `GET /api/footer`.
 
 ## Database collections
 

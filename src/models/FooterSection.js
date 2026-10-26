@@ -26,6 +26,8 @@ const linkSchema = new Schema(
   {
     text: { type: String, trim: true, required: true },
     link: { type: String, trim: true, required: true },
+    // Optional small animated tag shown next to the link, e.g. "We are hiring" beside Careers
+    badge: { type: String, trim: true, default: '' },
   },
   { _id: false },
 );

@@ -21,7 +21,12 @@ const assertSectionKey = (key) => {
   if (!FOOTER_SECTIONS.includes(key)) throw new ApiError(404, 'Footer section not found.');
 };
 
-const toLinks = (links = []) => links.map(({ text = '', link = '' }) => ({ text, link }));
+const toLinks = (links = []) =>
+  links.map(({ text = '', link = '', badge = '' }) => ({
+    text,
+    link,
+    badge: String(badge).trim(),
+  }));
 
 /** The fields an admin may set, checked. A section keeps either links or columns, by its kind. */
 const pickSectionFields = (key, { title = '', isActive = true, links = [], columns = [] }) => {
@@ -49,7 +54,7 @@ const pickSectionFields = (key, { title = '', isActive = true, links = [], colum
 
 /**
  * GET /api/footer — { company, freeLearningResources, ecosystemBrands }; a switched-off or deleted section is null.
- * company / freeLearningResources: { title, columns: [{ title, style, links: [{ text, link }] }] };
+ * company / freeLearningResources: { title, columns: [{ title, style, links: [{ text, link, badge }] }] };
  * ecosystemBrands: { title, links }.
  */
 export const getFooter = async (_req, res) => {
