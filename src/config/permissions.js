@@ -42,6 +42,12 @@ export const SECTIONS = {
     workspace: 'web',
     description: 'Header menu exams and their pages',
   },
+  header: {
+    label: 'Header',
+    workspace: 'web',
+    description: 'Menus, mobile menu, Store link and trending searches',
+    deletable: false,
+  },
   footer: {
     label: 'Footer',
     workspace: 'web',
@@ -83,9 +89,9 @@ const LEVEL_RANK = { none: 0, view: 1, edit: 2 };
 export const PRESETS = {
   webManager: {
     label: 'Web Manager',
-    sections: ['webDashboard', 'homepage', 'allExams', 'footer'],
+    sections: ['webDashboard', 'homepage', 'allExams', 'header', 'footer'],
   },
-  editor: { label: 'Editor', sections: ['homepage', 'allExams', 'footer'] },
+  editor: { label: 'Editor', sections: ['homepage', 'allExams', 'header', 'footer'] },
   seoManager: { label: 'SEO Manager', sections: ['seo'] },
   salesManager: { label: 'Sales Manager', sections: ['sales'] },
   hrManager: { label: 'HR Manager', sections: ['hr'] },

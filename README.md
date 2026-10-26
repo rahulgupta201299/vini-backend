@@ -51,7 +51,8 @@ src/
 │   ├── GoalCategory.js               `adminSelectYourGoalCategories`
 │   ├── GoalExam.js                   `adminSelectYourGoalExams`
 │   ├── ExamDetails.js                `adminExamDetails` (one exam page, joined by exam id)
-│   └── FooterSection.js              `adminFooterSections`
+│   ├── FooterSection.js              `adminFooterSections`
+│   └── HeaderSection.js              `adminHeaderSections`
 ├── routes/                           URL → controller, plus sign-in / role checks
 │   ├── index.js                      mounts every routes file under /api
 │   ├── health.js                     /api/health
@@ -216,6 +217,18 @@ Admin (Web Managers, Editors, Super Admins) — every list has `GET /`, `POST /`
 
 `/api/admin/footer` (Footer access — view / edit / delete): `GET /` → the saved sections in footer order; `DELETE /:key` deletes a section (Delete access; saving it again recreates it); `PUT /:key` (`company` — the columns next to the logo — `freeLearningResources`, `ecosystemBrands`). `company` and `freeLearningResources` take `{ title, isActive, columns: [{ title, style?, links: [{ text, link }] }] }` (`style` for company columns: `links`, `locations` with a pin, or `contact` — mailto: / tel: / wa.me links become email / Call / WhatsApp); `ecosystemBrands` takes `{ title, isActive, links }`. Links may have an optional `badge` (a small animated tag beside it, e.g. "We are hiring"). The website reads `GET /api/footer`.
 
+## Header (Web → Header)
+
+`/api/admin/header` (Header access — view / edit): `GET /` → the saved parts; `PUT /:key` saves one part:
+
+- `menus` `{ menus: [{ _id?, label, link, badge, items: [{ label, link }] }] }` — the desktop menu after "All Exams" (a menu
+  with items opens a dropdown)
+- `mobileMenu` `{ mobileSections: [{ _id?, title, items: [{ label, link, icon }] }] }` — tiles always go to their link
+- `settings` `{ storeLink, searchTrending: [String] }`
+
+The website reads `GET /api/navigation` → `{ navItems, mobileMenu, searchTrending, storeHref }` and adds "All Exams" (Homepage →
+All Exams) first.
+
 ## Database collections
 
 Database `vini`. Names are camelCase, starting with the area that owns the data (`admin…` for everything the
@@ -237,6 +250,7 @@ vini
 ├── adminSelectYourGoalCategories  Select Your Goal tabs
 ├── adminSelectYourGoalExams       Select Your Goal exams (joined to categories by id)
 ├── adminExamDetails               exam page content for All Exams and Select Your Goal (joined by exam id)
+├── adminHeaderSections            header: desktop menu, mobile menu, Store link + trending searches
 ├── adminFooterSections            footer: Company footer (columns next to the logo), Free Learning Resources, Our Ecosystem Brands
 ├── adminTopRankersStats           Top rankers headline boxes
 ├── adminTopRankersCategories      Top rankers tabs
