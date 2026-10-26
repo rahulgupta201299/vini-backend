@@ -217,9 +217,9 @@ Admin (Web Managers, Editors, Super Admins) — every list has `GET /`, `POST /`
 
 `/api/admin/footer` (Footer access — view / edit / delete): `GET /` → the saved sections in footer order; `DELETE /:key` deletes a section (Delete access; saving it again recreates it); `PUT /:key` (`company` — the columns next to the logo — `freeLearningResources`, `ecosystemBrands`). `company` and `freeLearningResources` take `{ title, isActive, columns: [{ title, style?, links: [{ text, link }] }] }` (`style` for company columns: `links`, `locations` with a pin, or `contact` — mailto: / tel: / wa.me links become email / Call / WhatsApp); `ecosystemBrands` takes `{ title, isActive, links }`. Links may have an optional `badge` (a small animated tag beside it, e.g. "We are hiring"). The website reads `GET /api/footer`.
 
-## Header (Web → Header)
+## Header & Menu (Web → Header & Menu)
 
-`/api/admin/header` (Header access — view / edit): `GET /` → the saved parts; `PUT /:key` saves one part:
+`/api/admin/header` (Header & Menu access — view / edit): `GET /` → the saved parts; `PUT /:key` saves one part:
 
 - `menus` `{ menus: [{ _id?, label, link, badge, items: [{ label, link }] }] }` — the desktop menu after "All Exams" (a menu
   with items opens a dropdown)

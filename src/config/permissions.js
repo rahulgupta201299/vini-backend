@@ -43,7 +43,7 @@ export const SECTIONS = {
     description: 'Header menu exams and their pages',
   },
   header: {
-    label: 'Header',
+    label: 'Header & Menu',
     workspace: 'web',
     description: 'Menus, mobile menu, Store link and trending searches',
     deletable: false,
