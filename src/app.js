@@ -34,8 +34,8 @@ const app = express();
 
 app.use(helmet());
 app.use(cors(corsOptions));
-// Homepage content can carry uploaded banner images (until S3 is connected), so it gets a bigger limit
-app.use('/api/admin/homepage', express.json({ limit: '15mb' }));
+// Homepage and course content can carry uploaded images / PDFs (until S3 is connected), so they get a bigger limit
+app.use(['/api/admin/homepage', '/api/admin/courses'], express.json({ limit: '15mb' }));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());

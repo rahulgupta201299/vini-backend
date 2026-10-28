@@ -7,6 +7,8 @@ import allExams from './allExams.js';
 import auth from './auth.js';
 import celebrationBanner from './celebrationBanner.js';
 import celebrationBanners from './celebrationBanners.js';
+import contact from './contact.js';
+import courses from './courses.js';
 import exams from './exams.js';
 import footer from './footer.js';
 import header from './header.js';
@@ -33,7 +35,7 @@ router.use(requireDatabase);
 // Website (no sign-in)
 router.use('/exams', exams);
 router.use('/celebration-banner', celebrationBanner);
-router.use('/', homepage); // /homepage, /select-your-goal, /top-rankers, /footer and /navigation
+router.use('/', homepage); // /homepage, /select-your-goal, /top-rankers, /footer, /navigation, /site-config, /courses
 
 // Admin panel
 router.use('/admin/auth', auth);
@@ -47,6 +49,8 @@ router.use('/admin/homepage/select-your-goal', selectYourGoal);
 router.use('/admin/homepage/top-rankers', topRankers);
 router.use('/admin/footer', footer);
 router.use('/admin/header', header);
+router.use('/admin/courses', courses);
+router.use('/admin/contact', contact);
 router.use('/admin/homepage/summary', homepageSummary);
 
 export default router;

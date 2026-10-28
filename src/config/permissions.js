@@ -53,6 +53,18 @@ export const SECTIONS = {
     workspace: 'web',
     description: 'Company, Free Learning Resources, Our Ecosystem Brands',
   },
+  gsFoundation: {
+    label: 'GS Foundation',
+    workspace: 'web',
+    description: "Beginner's Kit and Foundation Batch pages",
+    deletable: false,
+  },
+  contact: {
+    label: 'Contact Info',
+    workspace: 'web',
+    description: 'Phone, WhatsApp, email and website used across the site',
+    deletable: false,
+  },
   seo: { label: 'SEO', workspace: 'web' },
   sales: { label: 'Sales', workspace: 'web' },
   hr: { label: 'HR & Careers', workspace: 'web' },
@@ -89,9 +101,20 @@ const LEVEL_RANK = { none: 0, view: 1, edit: 2 };
 export const PRESETS = {
   webManager: {
     label: 'Web Manager',
-    sections: ['webDashboard', 'homepage', 'allExams', 'header', 'footer'],
+    sections: [
+      'webDashboard',
+      'homepage',
+      'allExams',
+      'header',
+      'footer',
+      'gsFoundation',
+      'contact',
+    ],
   },
-  editor: { label: 'Editor', sections: ['homepage', 'allExams', 'header', 'footer'] },
+  editor: {
+    label: 'Editor',
+    sections: ['homepage', 'allExams', 'header', 'footer', 'gsFoundation', 'contact'],
+  },
   seoManager: { label: 'SEO Manager', sections: ['seo'] },
   salesManager: { label: 'Sales Manager', sections: ['sales'] },
   hrManager: { label: 'HR Manager', sections: ['hr'] },

@@ -28,6 +28,8 @@
  *   adminTopRankersStats           "Our Top Rankers" headline boxes (e.g. "1000+ selections")
  *   adminTopRankersCategories      "Our Top Rankers" tabs (UPSC, State PCS, Other Exams)
  *   adminTopRankersBanners         result banners (joined to tabs by `category` id)
+ *   adminCoursePages               course pages under /courses/<section>/<slug> (e.g. GS Foundation → Beginner's Kit)
+ *   adminSiteSettings              site-wide settings, one document per `key` (e.g. "contact": phone, email, website)
  *
  * New sections follow the same pattern, e.g. "adminImpactStats".
  */
@@ -51,4 +53,6 @@ export const COLLECTIONS = {
   adminTopRankersStats: 'adminTopRankersStats',
   adminTopRankersCategories: 'adminTopRankersCategories',
   adminTopRankersBanners: 'adminTopRankersBanners',
+  adminCoursePages: 'adminCoursePages',
+  adminSiteSettings: 'adminSiteSettings',
 };
