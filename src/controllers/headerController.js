@@ -44,23 +44,39 @@ const PICKERS = {
       };
     }),
   }),
-  mobileMenu: ({ mobileSections = [] }) => ({
-    mobileSections: mobileSections.map(({ _id, title = '', items = [] }, index) => {
-      const where = `Section ${index + 1}${title ? ` (${title})` : ''}`;
+  mobileMenu: async ({ mobileSections = [] }) => {
+    const menus = await HeaderSection.findOne({ key: 'menus' }).select('menus._id').lean();
+    const menuIds = new Set((menus?.menus || []).map(({ _id }) => String(_id)));
 
-      assertText(title, `${where}: title`);
+    return {
+      mobileSections: mobileSections.map(({ _id, title = '', items = [] }, index) => {
+        const where = `Section ${index + 1}${title ? ` (${title})` : ''}`;
 
-      const id = mongoose.isValidObjectId(_id) ? { _id } : {};
-      const tiles = items.map(({ label = '', link = '', icon = '' }, itemIndex) => {
-        assertText(label, `${where}, tile ${itemIndex + 1}: text`);
-        assertText(link, `${where}, tile ${itemIndex + 1}: link`);
+        assertText(title, `${where}: title`);
 
-        return { label: label.trim(), link: link.trim(), icon: String(icon).trim() || 'FileText' };
-      });
+        const id = mongoose.isValidObjectId(_id) ? { _id } : {};
+        const tiles = items.map(({ label = '', link = '', icon = '', menu = '' }, itemIndex) => {
+          assertText(label, `${where}, tile ${itemIndex + 1}: text`);
+          assertText(link, `${where}, tile ${itemIndex + 1}: link`);
 
-      return { ...id, title: title.trim(), items: tiles };
-    }),
-  }),
+          if (menu && !menuIds.has(String(menu)))
+            throw new ApiError(
+              400,
+              `${where}, tile ${itemIndex + 1}: that desktop menu no longer exists.`,
+            );
+
+          return {
+            label: label.trim(),
+            link: link.trim(),
+            icon: String(icon).trim() || 'FileText',
+            menu: menu || null,
+          };
+        });
+
+        return { ...id, title: title.trim(), items: tiles };
+      }),
+    };
+  },
   settings: ({ storeLink = '', searchTrending = [] }) => {
     assertText(storeLink, 'Store link');
 
@@ -79,7 +95,7 @@ const PICKERS = {
 /**
  * GET /api/navigation — { navItems, mobileMenu, searchTrending, storeHref } (the website adds "All Exams").
  * navItems: [{ id, label, href, badge?, children?: [{ label, href }] }];
- * mobileMenu: [{ id, title, items: [{ label, href, icon }] }].
+ * mobileMenu: [{ id, title, items: [{ label, href, icon, dropdownId? }] }] — dropdownId is a navItems id.
  */
 export const getNavigation = async (_req, res) => {
   const sections = await HeaderSection.find({ key: { $in: HEADER_SECTIONS } }).lean();
@@ -101,7 +117,13 @@ export const getNavigation = async (_req, res) => {
   const mobileMenu = mobileSections.map(({ _id, title, items }) => ({
     id: String(_id),
     title,
-    items: items.map(({ label, link, icon }) => ({ label, href: link, icon })),
+    items: items.map(({ label, link, icon, menu }) => ({
+      label,
+      href: link,
+      icon,
+      // The website opens this desktop menu's dropdown under the tile
+      ...(menu && { dropdownId: String(menu) }),
+    })),
   }));
 
   res.json({ navItems, mobileMenu, searchTrending, storeHref: storeLink });

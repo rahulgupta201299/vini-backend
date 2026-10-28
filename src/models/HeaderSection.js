@@ -38,6 +38,8 @@ const mobileItemSchema = new Schema(
     link: { type: String, trim: true, required: true },
     // A lucide icon name, e.g. "Landmark"
     icon: { type: String, trim: true, default: 'FileText' },
+    // A desktop menu (its _id in "menus") whose dropdown items open under the tile; none → the tile is a link
+    menu: { type: Schema.Types.ObjectId, default: null },
   },
   { _id: false },
 );
