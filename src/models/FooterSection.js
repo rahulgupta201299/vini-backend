@@ -5,14 +5,20 @@ import { COLLECTIONS } from '../config/collections.js';
 const { Schema } = mongoose;
 
 /**
- * The footer sections managed in the admin, in the order they appear: the columns next to the logo
+ * The footer sections managed in the admin, in the order they appear: the "Important Exams" links above
+ * the footer (columns of exam links; column titles are for the admin only), the columns next to the logo
  * ("company" — Company, Upcoming Centres, Connect with us, Quick Links, Our Products, Prep Resources…),
  * the Free Learning Resources block and the Our Ecosystem Brands row.
  */
-export const FOOTER_SECTIONS = ['company', 'freeLearningResources', 'ecosystemBrands'];
+export const FOOTER_SECTIONS = [
+  'importantExams',
+  'company',
+  'freeLearningResources',
+  'ecosystemBrands',
+];
 
 /** Sections made of titled columns of links; "ecosystemBrands" is one list of links. */
-export const SECTIONS_WITH_COLUMNS = ['company', 'freeLearningResources'];
+export const SECTIONS_WITH_COLUMNS = ['importantExams', 'company', 'freeLearningResources'];
 
 /**
  * How a column's links look on the website (columns next to the logo):

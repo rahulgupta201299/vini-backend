@@ -152,7 +152,6 @@ Two collections, joined by the category id (MongoDB `$lookup` / `populate`):
 - `adminAllExamsSubCategories` — `{ category: <category id>, name, slug, isActive, order, link, menuIcon: { name, color, background }, details: <adminExamDetails id> }` — `link` is optional: where the header menu item goes (empty → `/goal/<slug>`)
 - `adminExamDetails` — `{ exam: <sub category or goal exam id>, source: allExams | selectYourGoal, subTitle, banners, freeClasses, batches, topRankers, aboutExam, faqs }` — an exam's page. The exam's `details` holds this document's id (Select Your Goal exams: `null` until the page is saved); `exam` points back.
 
-**One-off after deploying:** `npm run db:link-exam-details -- --dry-run`, then `npm run db:link-exam-details`. It backs up the old embedded `details` to `backups/`, refreshes any page edited on the old admin, and sets every exam's `details` to its adminExamDetails id. Safe to re-run.
 where `details` is `{ subTitle, banners[], freeClasses[], batches[], topRankers[], aboutExam: { title, highlights[], content } (content is sanitised HTML), faqs[] }`.
 Banners and top rankers have separate `webImageUrl` / `mobileImageUrl`. `slug` is made from the name (page `/goal/<slug>`).
 

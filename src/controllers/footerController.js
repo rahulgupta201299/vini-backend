@@ -7,7 +7,8 @@ import ApiError from '../utils/ApiError.js';
 import { assertBoolean, assertText } from '../utils/ordering.js';
 
 /**
- * Footer sections (one document each, by `key`): the columns next to the logo (company), Free Learning Resources
+ * Footer sections (one document each, by `key`): Important Exams (above the footer), the columns next to the logo
+ * (company), Free Learning Resources
  * and Our Ecosystem Brands.
  * Edited and switched on / off; with Delete access a section is deleted for good (the website then leaves it out),
  * and saving it again creates it anew.
@@ -53,8 +54,8 @@ const pickSectionFields = (key, { title = '', isActive = true, links = [], colum
 /* ---------- public (website) ---------- */
 
 /**
- * GET /api/footer — { company, freeLearningResources, ecosystemBrands }; a switched-off or deleted section is null.
- * company / freeLearningResources: { title, columns: [{ title, style, links: [{ text, link, badge }] }] };
+ * GET /api/footer — { importantExams, company, freeLearningResources, ecosystemBrands }; a switched-off or deleted
+ * section is null. importantExams / company / freeLearningResources: { title, columns: [{ title, style, links: [{ text, link, badge }] }] };
  * ecosystemBrands: { title, links }.
  */
 export const getFooter = async (_req, res) => {
