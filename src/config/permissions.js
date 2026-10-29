@@ -59,6 +59,12 @@ export const SECTIONS = {
     description: "Beginner's Kit and Foundation Batch pages",
     deletable: false,
   },
+  mentorship: {
+    label: 'Mentorship',
+    workspace: 'web',
+    description: '1:1 Mentorship and Free Mentorship Program pages',
+    deletable: false,
+  },
   contact: {
     label: 'Contact Info',
     workspace: 'web',
@@ -108,12 +114,13 @@ export const PRESETS = {
       'header',
       'footer',
       'gsFoundation',
+      'mentorship',
       'contact',
     ],
   },
   editor: {
     label: 'Editor',
-    sections: ['homepage', 'allExams', 'header', 'footer', 'gsFoundation', 'contact'],
+    sections: ['homepage', 'allExams', 'header', 'footer', 'gsFoundation', 'mentorship', 'contact'],
   },
   seoManager: { label: 'SEO Manager', sections: ['seo'] },
   salesManager: { label: 'Sales Manager', sections: ['sales'] },

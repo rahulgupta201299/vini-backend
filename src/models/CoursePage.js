@@ -4,8 +4,9 @@ import { COLLECTIONS } from '../config/collections.js';
 
 const { Schema } = mongoose;
 
-/** Course sections that have admin-managed pages (/courses/<section>/<slug>). */
-export const COURSE_SECTIONS = ['gs-foundation'];
+/** Course sections that have admin-managed pages (/courses/<section>/<slug>), with the admin access each needs. */
+export const COURSE_SECTION_ACCESS = { 'gs-foundation': 'gsFoundation', mentorship: 'mentorship' };
+export const COURSE_SECTIONS = Object.keys(COURSE_SECTION_ACCESS);
 
 /**
  * Page layouts:
@@ -13,8 +14,10 @@ export const COURSE_SECTIONS = ['gs-foundation'];
  *           (e.g. Beginner's Kit for UPSC)
  *   batch → live batch hero with plans, stages of preparation, plan comparison, FAQs
  *           (e.g. Foundation Batch 2027/29)
+ *   mentorship → hero with a YouTube video, optional form offer and program timeline, then fixed
+ *           content (how it works, features), FAQs (e.g. 1:1 Mentorship 2028/29, Free Mentorship Program)
  */
-export const COURSE_LAYOUTS = ['guide', 'batch'];
+export const COURSE_LAYOUTS = ['guide', 'batch', 'mentorship'];
 
 const ctaSchema = new Schema(
   {
@@ -104,6 +107,60 @@ const batchSchema = new Schema(
   { _id: false },
 );
 
+const phaseSchema = new Schema(
+  {
+    phase: { type: String, trim: true, required: true },
+    title: { type: String, trim: true, required: true },
+    // Months, "YYYY-MM"; no `to` → "<from> Onward"
+    from: { type: String, trim: true, required: true },
+    to: { type: String, trim: true, default: '' },
+  },
+  { _id: false },
+);
+
+const mentorshipSchema = new Schema(
+  {
+    // Paid pages: the price in ₹ (shown as "₹34,999"); free pages show "FREE Course"
+    price: { type: Number, min: 0 },
+    priceNote: { type: String, trim: true, default: '' },
+    batchLabel: { type: String, trim: true, default: '' },
+    // Poster image with a play button; the YouTube video plays in its place
+    video: {
+      url: { type: String, trim: true, default: '' },
+      image: { type: String, default: '' },
+      alt: { type: String, trim: true, default: '' },
+      caption: { type: String, trim: true, default: '' },
+    },
+    // "Fill the form to get Special Offer" bar (only pages that have one)
+    offer: {
+      type: new Schema(
+        {
+          text: { type: String, trim: true, required: true },
+          ctaLabel: { type: String, trim: true, required: true },
+          link: { type: String, trim: true, default: '' },
+        },
+        { _id: false },
+      ),
+      default: undefined,
+    },
+    // Program timeline (only pages that have one); the admin edits the months
+    timeline: {
+      type: new Schema(
+        {
+          title: { type: String, trim: true, default: '' },
+          subtitle: { type: String, trim: true, default: '' },
+          phases: { type: [phaseSchema], default: [] },
+        },
+        { _id: false },
+      ),
+      default: undefined,
+    },
+    // The rest of the page, as the website renders it (how it works, features, toppers…) — not edited in the admin
+    content: { type: Schema.Types.Mixed, default: () => ({}) },
+  },
+  { _id: false, minimize: false },
+);
+
 const coursePageSchema = new Schema(
   {
     section: { type: String, enum: COURSE_SECTIONS, required: true },
@@ -143,6 +200,9 @@ const coursePageSchema = new Schema(
 
     // batch layout
     batch: { type: batchSchema, default: undefined },
+
+    // mentorship layout
+    mentorship: { type: mentorshipSchema, default: undefined },
   },
   { timestamps: true, versionKey: false, collection: COLLECTIONS.adminCoursePages },
 );

@@ -1,16 +1,21 @@
-import CoursePage, { COURSE_SECTIONS } from '../models/CoursePage.js';
+import { actionForMethod, can } from '../config/permissions.js';
+import CoursePage, { COURSE_SECTION_ACCESS, COURSE_SECTIONS } from '../models/CoursePage.js';
 import ApiError from '../utils/ApiError.js';
 import { DAY_PATTERN, formatDay, formatMonth, MONTH_PATTERN } from '../utils/courseFormat.js';
 import { assertText, findByIdOrThrow } from '../utils/ordering.js';
 
 /**
- * Course pages (/courses/<section>/<slug>), e.g. GS Foundation → Beginner's Kit, Foundation Batch 2027/29.
- * The admin edits a page part by part; parts not listed for a layout can't be changed from the admin.
+ * Course pages (/courses/<section>/<slug>), e.g. GS Foundation → Beginner's Kit, Foundation Batch 2027/29,
+ * Mentorship → 1:1 Mentorship 2028/29. The admin edits a page part by part; parts not listed for a layout
+ * can't be changed from the admin. Each course section needs its own admin access (COURSE_SECTION_ACCESS).
  */
 
 /* ---------- checks ---------- */
 
 const LINK_PATTERN = /^(\/|#|https?:\/\/)/i;
+// A YouTube video page: youtube.com/watch?v=…, /shorts/…, /live/…, /embed/… or youtu.be/…
+const YOUTUBE_PATTERN =
+  /^https:\/\/((www|m)\.)?(youtube\.com\/(watch\?(.*&)?v=|shorts\/|live\/|embed\/)|youtu\.be\/)[\w-]{6,}/i;
 const INLINE_FILE_PATTERN = /^data:(image\/[\w.+-]+|application\/pdf);base64,/i;
 // ~3 MB file → ~4 MB as a data URL (until S3 is connected)
 const MAX_INLINE_FILE_LENGTH = 4.2 * 1024 * 1024;
@@ -259,7 +264,91 @@ const BATCH_PARTS = {
   faqs,
 };
 
-const PARTS = { guide: GUIDE_PARTS, batch: BATCH_PARTS };
+/** "34999" → "₹34,999" */
+const formatRupees = (amount) => `₹${amount.toLocaleString('en-IN')}`;
+
+/** A part that only some mentorship pages have (the form offer, the timeline). */
+const mentorshipBlock = (page, key, label) => {
+  const block = page.mentorship?.[key];
+
+  if (!block) throw new ApiError(404, `This page has no ${label}.`);
+
+  return block;
+};
+
+const MENTORSHIP_PARTS = {
+  // Title, description, start date and — on paid pages — the price
+  intro: (body, page) => {
+    const fields = intro(body);
+
+    if (page.isFree) return fields;
+
+    const price = Number(body.price);
+
+    if (body.price === '' || !Number.isFinite(price) || price < 0)
+      throw new ApiError(400, 'Price must be a number.');
+
+    const amount = Math.round(price);
+
+    return {
+      ...fields,
+      priceLabel: formatRupees(amount),
+      mentorship: { ...page.mentorship, price: amount },
+    };
+  },
+  video: ({ url = '' }, page) => {
+    const link = text(url);
+
+    if (!YOUTUBE_PATTERN.test(link))
+      throw new ApiError(400, 'Add a YouTube video link, e.g. https://www.youtube.com/watch?v=…');
+
+    return { mentorship: { ...page.mentorship, video: { ...page.mentorship.video, url: link } } };
+  },
+  offer: ({ link = '' }, page) => {
+    const offer = mentorshipBlock(page, 'offer', 'form offer');
+
+    assertText(link, 'Form link');
+
+    return {
+      mentorship: { ...page.mentorship, offer: { ...offer, link: assertLink(link, 'Form link') } },
+    };
+  },
+  ctas,
+  timeline: ({ phases = [] }, page) => {
+    const timeline = mentorshipBlock(page, 'timeline', 'timeline');
+
+    return {
+      mentorship: {
+        ...page.mentorship,
+        timeline: {
+          ...timeline,
+          phases: editByPosition(
+            timeline.phases,
+            phases,
+            'Phases',
+            ({ from = '', to = '' }, index) => {
+              const where = `Phase ${index + 1}`;
+
+              if (!MONTH_PATTERN.test(from))
+                throw new ApiError(400, `${where}: choose the start month.`);
+
+              if (to && !MONTH_PATTERN.test(to))
+                throw new ApiError(400, `${where}: choose the end month.`);
+
+              if (to && from > to)
+                throw new ApiError(400, `${where}: the dates must end after they start.`);
+
+              return { from, to: text(to) };
+            },
+          ),
+        },
+      },
+    };
+  },
+  faqs,
+};
+
+const PARTS = { guide: GUIDE_PARTS, batch: BATCH_PARTS, mentorship: MENTORSHIP_PARTS };
 
 /* ---------- website shape ---------- */
 
@@ -304,6 +393,38 @@ const batchFor = (page) => {
   };
 };
 
+/** "December 2026 - December 2027", or "May 2028 Onward" without an end month */
+const periodOf = ({ from, to }) =>
+  to ? `${formatMonth(from)} - ${formatMonth(to)}` : `${formatMonth(from)} Onward`;
+
+const mentorshipFor = ({ mentorship, title }) => {
+  const { priceNote, batchLabel, video, offer, timeline, content } = mentorship;
+
+  return {
+    ...content,
+    ...(priceNote && { priceNote }),
+    ...(batchLabel && { batchLabel }),
+    media: {
+      image: video.image,
+      alt: video.alt || title,
+      caption: video.caption,
+      videoUrl: video.url,
+    },
+    ...(offer && { offer }),
+    ...(timeline && {
+      timeline: {
+        title: timeline.title,
+        subtitle: timeline.subtitle,
+        phases: timeline.phases.map(({ phase, title: phaseTitle, from, to }) => ({
+          phase,
+          title: phaseTitle,
+          period: periodOf({ from, to }),
+        })),
+      },
+    }),
+  };
+};
+
 /** Card headings, defaulting to the old wording built from the title */
 const headingsFor = ({ title, headings = {} }) => ({
   whatIs: headings.whatIs || `What is The ${title}?`,
@@ -345,6 +466,7 @@ const toPublicPage = (page) => {
     bestFor: page.bestFor || [],
     faqs: page.faqs,
     ...(layout === 'batch' && { batch: batchFor(page) }),
+    ...(layout === 'mentorship' && { mentorship: mentorshipFor(page) }),
   };
 };
 
@@ -377,9 +499,23 @@ export const getCourseSyllabus = async (req, res) => {
 
 /* ---------- admin ---------- */
 
-/** GET /api/admin/courses — every page (without its content), in menu order */
-export const getCoursePages = async (_req, res) => {
-  const pages = await CoursePage.find()
+/** Throws unless the admin has the access this request needs in the page's course section (e.g. Mentorship). */
+const assertCourseAccess = (req, section) => {
+  const action = actionForMethod(req.method);
+
+  if (can(req.admin, COURSE_SECTION_ACCESS[section], action)) return;
+
+  if (action === 'edit') throw new ApiError(403, 'You can only view this section.');
+
+  throw new ApiError(403, "You don't have access to this section.");
+};
+
+/** GET /api/admin/courses — the pages (without their content) of the sections this admin can view, in menu order */
+export const getCoursePages = async (req, res) => {
+  const sections = COURSE_SECTIONS.filter((section) =>
+    can(req.admin, COURSE_SECTION_ACCESS[section], 'view'),
+  );
+  const pages = await CoursePage.find({ section: { $in: sections } })
     .select('section slug label layout title updatedAt')
     .sort({ section: 1, order: 1 })
     .lean();
@@ -390,6 +526,9 @@ export const getCoursePages = async (_req, res) => {
 /** GET /api/admin/courses/:id — one page with everything the admin edits */
 export const getCoursePageById = async (req, res) => {
   const page = (await findByIdOrThrow(CoursePage, req.params.id, 'Course page')).toObject();
+
+  assertCourseAccess(req, page.section);
+
   const headings = page.layout === 'guide' ? { headings: headingsFor(page) } : {};
 
   res.json({ ...page, ...headings });
@@ -398,6 +537,9 @@ export const getCoursePageById = async (req, res) => {
 /** PUT /api/admin/courses/:id/:part — saves one part of a page (the parts depend on its layout) */
 export const updateCoursePagePart = async (req, res) => {
   const page = await findByIdOrThrow(CoursePage, req.params.id, 'Course page');
+
+  assertCourseAccess(req, page.section);
+
   const pickPart = PARTS[page.layout][req.params.part];
 
   if (!pickPart) throw new ApiError(404, 'This part of the page can’t be edited.');
